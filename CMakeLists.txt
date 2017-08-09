@@ -23,26 +23,24 @@ cmake_minimum_required( VERSION 2.8.12 )
 # illustrative reasons this module is called 'my' (change SHORT_NAME to your
 # preferred module name). NEST requires you to extend the 'SLIModule' (see
 # mymodule.h and mymodule.cpp as an example) and provide a module header
-# (see MODULE_HEADER). The subsequent instructions 
+# (see MODULE_HEADER). The subsequent instructions
 #
-# The configuration requires a compiled and installed NEST; if `nest-config` is 
+# The configuration requires a compiled and installed NEST; if `nest-config` is
 # not in the PATH, please specify the absolute path with `-Dwith-nest=...`.
 #
 # For more informations on how to extend and use your module see:
 #           https://nest.github.io/nest-simulator/extension_modules
 
 # 1) Name your module here, i.e. add later with -Dexternal-modules=my:
-set( SHORT_NAME my )
+set( SHORT_NAME olive )
 
 #    the complete module name is here:
 set( MODULE_NAME ${SHORT_NAME}module )
 
 # 2) Add all your sources here
 set( MODULE_SOURCES
-    mymodule.h mymodule.cpp
-    pif_psc_alpha.cpp pif_psc_alpha.h
-    drop_odd_spike_connection.h
-    step_pattern_builder.h step_pattern_builder.cpp
+    olivemodule.h olivemodule.cpp
+    hh_sdl_alpha_gap.cpp hh_sdl_alpha_gap.h
     )
 
 # 3) We require a header name like this:
@@ -271,7 +269,7 @@ install( DIRECTORY sli DESTINATION ${CMAKE_INSTALL_DATADIR} )
 if ( NOT CMAKE_CROSSCOMPILING )
   add_custom_target( generate_help ALL )
   # Extract help from all source files in the source code, put them in
-  # doc/help and generate a local help index in the build directory containing 
+  # doc/help and generate a local help index in the build directory containing
   # links to the help files.
   add_custom_command( TARGET generate_help POST_BUILD
     COMMAND python -B generate_help.py "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}"

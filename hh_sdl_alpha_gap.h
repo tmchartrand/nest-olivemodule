@@ -1,5 +1,5 @@
 /*
- *  hh_psc_alpha_gap.h
+ *  hh_sdl_alpha_gap.h
  *
  *  This file is part of NEST.
  *
@@ -20,10 +20,9 @@
  *
  */
 
-#ifndef HH_PSC_ALPHA_GAP_H
-#define HH_PSC_ALPHA_GAP_H
+#ifndef hh_sdl_alpha_gap_H
+#define hh_sdl_alpha_gap_H
 
-#include "config.h"
 
 #ifdef HAVE_GSL
 
@@ -42,6 +41,7 @@
 #include "ring_buffer.h"
 #include "recordables_map.h"
 #include "universal_data_logger.h"
+#include "name.h"
 
 namespace nest
 {
@@ -57,14 +57,14 @@ namespace nest
  * @param void* Pointer to model neuron instance.
  */
 extern "C" int
-hh_psc_alpha_gap_dynamics( double, const double*, double*, void* );
+hh_sdl_alpha_gap_dynamics( double, const double*, double*, void* );
 
 /* BeginDocumentation
-Name: hh_psc_alpha_gap - Hodgkin Huxley neuron model with gap-junction support.
+Name: hh_sdl_alpha_gap - Hodgkin Huxley neuron model with gap-junction support.
 
 Description:
 
- hh_psc_alpha_gap is an implementation of a spiking neuron using the
+ hh_sdl_alpha_gap is an implementation of a spiking neuron using the
  Hodkin-Huxley formalism. In contrast to hh_psc_alpha the implementation
  additionally supports gap junctions.
 
@@ -135,15 +135,15 @@ Author: Jan Hahne, Moritz Helias, Susanne Kunkel
 SeeAlso: hh_psc_alpha, hh_cond_exp_traub, gap_junction
 */
 
-class hh_psc_alpha_gap : public Archiving_Node
+class hh_sdl_alpha_gap : public Archiving_Node
 {
 
 public:
   typedef Node base;
 
-  hh_psc_alpha_gap();
-  hh_psc_alpha_gap( const hh_psc_alpha_gap& );
-  ~hh_psc_alpha_gap();
+  hh_sdl_alpha_gap();
+  hh_sdl_alpha_gap( const hh_sdl_alpha_gap& );
+  ~hh_sdl_alpha_gap();
 
   /**
    * Import sets of overloaded virtual functions.
@@ -174,7 +174,6 @@ public:
 
   /**
    * Return membrane potential at time t.
-potentials_.connect_logging_device();
    * This function is not thread-safe and should not be used in threaded
    * contexts to access the current membrane potential values.
    * @param Time the current network time
@@ -208,11 +207,11 @@ private:
   // Friends --------------------------------------------------------
 
   // make dynamics function quasi-member
-  friend int hh_psc_alpha_gap_dynamics( double, const double*, double*, void* );
+  friend int hh_sdl_alpha_gap_dynamics( double, const double*, double*, void* );
 
   // The next two classes need to be friend to access the State_ class/member
-  friend class RecordablesMap< hh_psc_alpha_gap >;
-  friend class UniversalDataLogger< hh_psc_alpha_gap >;
+  friend class RecordablesMap< hh_sdl_alpha_gap >;
+  friend class UniversalDataLogger< hh_sdl_alpha_gap >;
 
 private:
   // ----------------------------------------------------------------
@@ -222,8 +221,6 @@ private:
   {
     double t_ref_;   //!< refractory time in ms
     double g_Na;     //!< Sodium Conductance in nS
-    double g_Kv1;    //!< Potassium Conductance in nS
-    double g_Kv3;    //!< Potassium Conductance in nS
     double g_L;      //!< Leak Conductance in nS
     double C_m;      //!< Membrane Capacitance in pF
     double E_Na;     //!< Sodium Reversal Potential in mV
@@ -232,6 +229,14 @@ private:
     double tau_synE; //!< Synaptic Time Constant Excitatory Synapse in ms
     double tau_synI; //!< Synaptic Time Constant for Inhibitory Synapse in ms
     double I_e;      //!< Constant Current in pA
+    // TC
+    double g_Kca;    //!< Potassium Conductance in nS
+    double g_Cal;
+    double g_Cah;
+    double g_K;
+    double g_H;
+    double E_H;
+    double E_Ca;
 
     Parameters_(); //!< Sets default parameter values
 
@@ -267,6 +272,10 @@ public:
       I_EXC,  // 6
       DI_INH, // 7
       I_INH,  // 8
+      HH_L,
+      HH_Q,
+      HH_R,
+      HH_S,
       STATE_VEC_SIZE
     };
 
@@ -290,12 +299,12 @@ private:
    */
   struct Buffers_
   {
-    Buffers_( hh_psc_alpha_gap& ); //!<Sets buffer pointers to 0
+    Buffers_( hh_sdl_alpha_gap& ); //!<Sets buffer pointers to 0
     //! Sets buffer pointers to 0
-    Buffers_( const Buffers_&, hh_psc_alpha_gap& );
+    Buffers_( const Buffers_&, hh_sdl_alpha_gap& );
 
     //! Logger for all analog data
-    UniversalDataLogger< hh_psc_alpha_gap > logger_;
+    UniversalDataLogger< hh_sdl_alpha_gap > logger_;
 
     /** buffers and sums up incoming spikes/currents */
     RingBuffer spike_exc_;
@@ -368,17 +377,17 @@ private:
   Buffers_ B_;
 
   //! Mapping of recordables names to access functions
-  static RecordablesMap< hh_psc_alpha_gap > recordablesMap_;
+  static RecordablesMap< hh_sdl_alpha_gap > recordablesMap_;
 };
 
 inline void
-hh_psc_alpha_gap::update( Time const& origin, const long from, const long to )
+hh_sdl_alpha_gap::update( Time const& origin, const long from, const long to )
 {
   update_( origin, from, to, false );
 }
 
 inline bool
-hh_psc_alpha_gap::wfr_update( Time const& origin,
+hh_sdl_alpha_gap::wfr_update( Time const& origin,
   const long from,
   const long to )
 {
@@ -391,7 +400,7 @@ hh_psc_alpha_gap::wfr_update( Time const& origin,
 }
 
 inline port
-hh_psc_alpha_gap::send_test_event( Node& target,
+hh_sdl_alpha_gap::send_test_event( Node& target,
   rport receptor_type,
   synindex,
   bool )
@@ -403,7 +412,7 @@ hh_psc_alpha_gap::send_test_event( Node& target,
 
 
 inline port
-hh_psc_alpha_gap::handles_test_event( SpikeEvent&, rport receptor_type )
+hh_sdl_alpha_gap::handles_test_event( SpikeEvent&, rport receptor_type )
 {
   if ( receptor_type != 0 )
   {
@@ -413,7 +422,7 @@ hh_psc_alpha_gap::handles_test_event( SpikeEvent&, rport receptor_type )
 }
 
 inline port
-hh_psc_alpha_gap::handles_test_event( CurrentEvent&, rport receptor_type )
+hh_sdl_alpha_gap::handles_test_event( CurrentEvent&, rport receptor_type )
 {
   if ( receptor_type != 0 )
   {
@@ -423,7 +432,7 @@ hh_psc_alpha_gap::handles_test_event( CurrentEvent&, rport receptor_type )
 }
 
 inline port
-hh_psc_alpha_gap::handles_test_event( DataLoggingRequest& dlr,
+hh_sdl_alpha_gap::handles_test_event( DataLoggingRequest& dlr,
   rport receptor_type )
 {
   if ( receptor_type != 0 )
@@ -434,7 +443,7 @@ hh_psc_alpha_gap::handles_test_event( DataLoggingRequest& dlr,
 }
 
 inline port
-hh_psc_alpha_gap::handles_test_event( GapJunctionEvent&, rport receptor_type )
+hh_sdl_alpha_gap::handles_test_event( GapJunctionEvent&, rport receptor_type )
 {
   if ( receptor_type != 0 )
   {
@@ -444,7 +453,7 @@ hh_psc_alpha_gap::handles_test_event( GapJunctionEvent&, rport receptor_type )
 }
 
 inline void
-hh_psc_alpha_gap::get_status( DictionaryDatum& d ) const
+hh_sdl_alpha_gap::get_status( DictionaryDatum& d ) const
 {
   P_.get( d );
   S_.get( d );
@@ -454,7 +463,7 @@ hh_psc_alpha_gap::get_status( DictionaryDatum& d ) const
 }
 
 inline void
-hh_psc_alpha_gap::set_status( const DictionaryDatum& d )
+hh_sdl_alpha_gap::set_status( const DictionaryDatum& d )
 {
   Parameters_ ptmp = P_; // temporary copy in case of errors
   ptmp.set( d );         // throws if BadProperty
@@ -471,8 +480,14 @@ hh_psc_alpha_gap::set_status( const DictionaryDatum& d )
   P_ = ptmp;
   S_ = stmp;
 }
-
+namespace names
+{
+  extern const Name l;
+  extern const Name q;
+  extern const Name r;
+  extern const Name s;
+}
 } // namespace
 
 #endif // HAVE_GSL
-#endif // HH_PSC_ALPHA_GAP_H
+#endif // hh_sdl_alpha_gap_H

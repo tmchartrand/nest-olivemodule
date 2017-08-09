@@ -1,5 +1,5 @@
 /*
- *  mymodule.h
+ *  olivemodule.h
  *
  *  This file is part of NEST.
  *
@@ -28,14 +28,14 @@
 #include "slimodule.h"
 
 // Put your stuff into your own namespace.
-namespace mynest
+namespace nest
 {
 
 /**
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
  */
-class MyModule : public SLIModule
+class OliveModule : public SLIModule
 {
 public:
   // Interface functions ------------------------------------------
@@ -44,12 +44,12 @@ public:
    * @note The constructor registers the module with the dynamic loader.
    *       Initialization proper is performed by the init() method.
    */
-  MyModule();
+  OliveModule();
 
   /**
    * @note The destructor does not do much in modules.
    */
-  ~MyModule();
+  ~OliveModule();
 
   /**
    * Initialize module.
@@ -63,12 +63,12 @@ public:
   const std::string name( void ) const;
 
   /**
-   * Return the name of a sli file to execute when mymodule is loaded.
+   * Return the name of a sli file to execute when olivemodule is loaded.
    * This mechanism can be used to define SLI commands associated with your
    * module, in particular, set up type tries for functions you have defined.
    */
   const std::string commandstring( void ) const;
 };
-} // namespace mynest
+} // namespace nest
 
 #endif

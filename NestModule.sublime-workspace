@@ -1,0 +1,327 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "/*\n *  hh_psc_alpha_gap.cpp\n *\n *  This file is part of NEST.\n *\n *  Copyright (C) 2004 The NEST Initiative\n *\n *  NEST is free software: you can redistribute it and/or modify\n *  it under the terms of the GNU General Public License as published by\n *  the Free Software Foundation, either version 2 of the License, or\n *  (at your option) any later version.\n *\n *  NEST is distributed in the hope that it will be useful,\n *  but WITHOUT ANY WARRANTY; without even the implied warranty of\n *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n *  GNU General Public License for more details.\n *\n *  You should have received a copy of the GNU General Public License\n *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.\n *\n */\n\n\n#include \"hh_psc_alpha_gap.h\"\n\n#ifdef HAVE_GSL\n\n// C++ includes:\n#include <cmath> // in case we need isnan() // fabs\n#include <cstdio>\n#include <iomanip>\n#include <iostream>\n#include <limits>\n\n// Includes from libnestutil:\n#include \"numerics.h\"\n\n// Includes from nestkernel:\n#include \"exceptions.h\"\n#include \"kernel_manager.h\"\n#include \"universal_data_logger_impl.h\"\n\n// Includes from sli:\n#include \"dict.h\"\n#include \"dictutils.h\"\n#include \"doubledatum.h\"\n#include \"integerdatum.h\"\n\nnest::RecordablesMap< nest::hh_psc_alpha_gap >\n  nest::hh_psc_alpha_gap::recordablesMap_;\n\nnamespace nest\n{\n// Override the create() method with one call to RecordablesMap::insert_()\n// for each quantity to be recorded.\ntemplate <>\nvoid\nRecordablesMap< hh_psc_alpha_gap >::create()\n{\n  // use standard names whereever you can for consistency!\n  insert_( names::V_m,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::V_M > );\n  insert_( names::I_syn_ex,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::I_EXC > );\n  insert_( names::I_syn_in,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::I_INH > );\n  insert_( names::Act_m,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_M > );\n  insert_( names::Act_h,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_H > );\n  insert_( names::Inact_n,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_N > );\n  insert_( names::Inact_p,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_P > );\n  // TC\n  insert_( names::l,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_L > );\n  insert_( names::q,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_Q > );\n  insert_( names::r,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_R > );\n  insert_( names::s,\n    &hh_psc_alpha_gap::get_y_elem_< hh_psc_alpha_gap::State_::HH_S > );\n\n}\n\nextern \"C\" int\nhh_psc_alpha_gap_dynamics( double time,\n  const double y[],\n  double f[],\n  void* pnode )\n{\n  // a shorthand\n  typedef nest::hh_psc_alpha_gap::State_ S;\n\n  // get access to node so we can almost work as in a member function\n  assert( pnode );\n  const nest::hh_psc_alpha_gap& node =\n    *( reinterpret_cast< nest::hh_psc_alpha_gap* >( pnode ) );\n\n  // y[] here is---and must be---the state vector supplied by the integrator,\n  // not the state vector in the node, node.S_.y[].\n\n  // The following code is verbose for the sake of clarity. We assume that a\n  // good compiler will optimize the verbosity away ...\n\n  // shorthand for state variables\n  const double& V = y[ S::V_M ];\n  const double& m = y[ S::HH_M ];\n  const double& h = y[ S::HH_H ];\n  const double& n = y[ S::HH_N ];\n  const double& p = y[ S::HH_P ];\n  const double& dI_ex = y[ S::DI_EXC ];\n  const double& I_ex = y[ S::I_EXC ];\n  const double& dI_in = y[ S::DI_INH ];\n  const double& I_in = y[ S::I_INH ];\n  // TC\n  const double& l = y[ S::HH_ ];\n  const double& q = y[ S::HH_ ];\n  const double& r = y[ S::HH_ ];\n  const double& s = y[ S::HH_ ];\n\n  // TC\n  //Somatic\n\n  //Na\n  const double a_m =  0.1*(V+41)*(1-std::exp(-(V+41)/10));\n  const double b_m = 9.0*std::exp(-(V+66)/20);\n  const double mlim =  a_m*(a_m+b_m);\n  const double a_h =  5.0*std::exp(-(V+60)/15);\n  const double b_h =  (V+50)*(1-std::exp(-(V+50)/10));\n  const double t_h =  170*(a_h + b_h);\n  const double hlim =  a_h*(a_h+b_h);\n\n  const double mlim =  1*(1+std::exp(-(V+30)/5.5));\n  const double hlim =  1*(1+std::exp((V+70)/5.8));\n  const double t_h =  3*std::exp(-(V+40)/33);\n\n  const double I_na = node.P_.gNa*(mlim**3)*h*(V-node.P_.E_na);\n\n  //K_dr\n  const double a_n = (V+41)*(1-std::exp(-(V+41)/10));\n  const double b_n = 12.5*std::exp(-(V+51)/80);\n  const double nlim = a_n*(a_n+b_n);\n  const double t_n = 5*(a_n+b_n);\n\n  const double a_x = (0.13*V+3.25)*(1-std::exp(-(V+25)/10));\n  const double b_x = 1.69*std::exp(-0.0125*V - 0.4375);\n  const double nlim = a_x*(a_x+b_x);\n  const double t_n = 1*(a_x+b_x);\n\n  const double I_k = node.P_.gK*(nlim**4)*(V-node.P_.E_k);\n\n\n  //Ca_l\n  const double klim = 1*(1+std::exp(-(V+61)/4.2));\n  // t_k = 5;//1/5 dG? (=0 for manor)\n  const double llim = 1*(1+std::exp((V+85.5)/8.5));//\n  const double t_l = 35 + 20*std::exp((V+160)/30)*(1+std::exp((V+84)/7.3));\n  // t_l = 40 + 30*std::exp((V+160)/30)*(1+std::exp((V+84)/8.3));// manor\n  const double I_cal = node.P_.gCal*(klim**3)*l*(V-node.P_.E_ca);\n\n  //H - very slow\n  const double qlim = 1*(1+std::exp((V+75)/5.5));\n  // qlim = 1*(1+std::exp((V+80)/4));//vdg\n  const double t_q = 1*(std::exp(-0.086*V-14.6) + std::exp(0.07*V-1.87));\n  const double I_h = node.P_.gH*q*(V - node.P_.E_h);\n\n  //leak\n  const double I_l = node.P_.gL*(V-node.P_.E_l);\n\n  //Dendritic\n\n  //Ca_h - fast intrinsically, slow to reflect propagation to dendrites\n  const double a_r = 1.6*(1+std::exp(-(V-5)/14));\n  // a_r = 1.7*(1+std::exp(-(Vd+5)/13.9)); //from deGruijl\n  const double b_r = -0.02*(V+8.5)*(1-std::exp((V+8.5)/5)); //*** must be - (dG)\n  const double rlim = a_r*(a_r+b_r);\n  const double t_r = 5*(a_r+b_r);//5/1? (dG)\n  const double I_cah = node.P_.gCah*r**2*(V-node.P_.E_ca);\n\n  //K_Ca\n  const double cca = -40*I_cah;\n  const double a_s = min(2*10^-5*cca,0.01);//gives max cond. at 500\n  const double b_s = 0.015;\n  // t_s = 1*(a_s+b_s);\n  const double t_s = 13+1*(a_s+b_s);\n  const double I_kca = node.P_.gKca*s*(V-node.P_.E_k);\n  const double slim = a_s*(a_s+b_s);\n\n\n  // set I_gap depending on interpolation order\n  double gap = 0.0;\n\n  const double t = time / node.B_.step_;\n\n  switch ( kernel().simulation_manager.get_wfr_interpolation_order() )\n  {\n  case 0:\n    gap = -node.B_.sumj_g_ij_ * V\n      + node.B_.interpolation_coefficients[ node.B_.lag_ ];\n    break;\n\n  case 1:\n    gap = -node.B_.sumj_g_ij_ * V\n      + node.B_.interpolation_coefficients[ node.B_.lag_ * 2 + 0 ]\n      + node.B_.interpolation_coefficients[ node.B_.lag_ * 2 + 1 ] * t;\n    break;\n\n  case 3:\n    gap = -node.B_.sumj_g_ij_ * V\n      + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 0 ]\n      + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 1 ] * t\n      + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 2 ] * t * t\n      + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 3 ] * t * t * t;\n    break;\n\n  default:\n    throw BadProperty( \"Interpolation order must be 0, 1, or 3.\" );\n  }\n\n  const double I_gap = gap;\n\n  // V dot -- synaptic input are currents, inhib current is negative\n  f[ S::V_M ] = ( -(I_l+I_cal+I_cah+I_na+I_k+I_h+I_kca)\n    + node.B_.I_stim_ + node.P_.I_e + I_ex\n    + I_in + I_gap ) / node.P_.C_m;\n\n  inline double f_gate(x, lim, tau) {\n    return (lim-x)/tau;\n  }\n  // channel dynamicsf_gate(h,hlim,t_h);...\n  f[ S::HH_N ] = f_gate(y[ S::HH_N ], nlim, t_n);\n  f[ S::HH_L ] = f_gate(y[ S::HH_L ], llim, t_l);\n  f[ S::HH_Q ] = f_gate(y[ S::HH_Q ], qlim, t_q);\n  f[ S::HH_R ] = f_gate(y[ S::HH_R ], rlim, t_r);\n  f[ S::HH_S ] = f_gate(y[ S::HH_S ], slim, t_s);\n\n  // synapses: alpha functions\n  f[ S::DI_EXC ] = -dI_ex / node.P_.tau_synE;\n  f[ S::I_EXC ] = dI_ex - ( I_ex / node.P_.tau_synE );\n  f[ S::DI_INH ] = -dI_in / node.P_.tau_synI;\n  f[ S::I_INH ] = dI_in - ( I_in / node.P_.tau_synI );\n\n  return GSL_SUCCESS;\n}\n\nnamespace names\n{\nconst Name l( \"l\" );\nconst Name q( \"q\" );\nconst Name r( \"r\" );\nconst Name s( \"s\" );\n}\n}\n\n/* ----------------------------------------------------------------\n * Default constructors defining default parameters and state\n * ---------------------------------------------------------------- */\n\nnest::hh_psc_alpha_gap::Parameters_::Parameters_()\n  : tau_synE( 0.2 ) // ms\n  , tau_synI( 2.0 ) // ms\n  , I_e( 0.0 )      // pA\n  // TC\n  , t_ref_( 50. )   // ms\n  , g_Na( 70. )   // nS\n  , g_L( 0.015 )     // nS\n  , C_m( 1 )     // pF\n  , E_Na( 55. )    // mV\n  , E_K( -75. )    // mV\n  , E_L( -63. )     // mV\n  // TC\n  , g_K( 18.)\n  , g_Cal( 1.4)\n  , g_H( 1.5)\n  , g_Cah( 4.)\n  , g_Kca( 5.)\n{\n}\n\nnest::hh_psc_alpha_gap::State_::State_( const Parameters_& )\n  : r_( 0 )\n{\n  y_[ 0 ] = -69.60401191631222; // p.E_L;\n  //'Inact_n': 0.0005741576228359798, 'Inact_p': 0.00025113182271506364\n  //'Act_h': 0.8684620412943986,\n  for ( size_t i = 1; i < STATE_VEC_SIZE; ++i )\n  {\n    y_[ i ] = 0;\n  }\n\n  // equilibrium values for (in)activation variables\n  // todo\n}\n\nnest::hh_psc_alpha_gap::State_::State_( const State_& s )\n  : r_( s.r_ )\n{\n  for ( size_t i = 0; i < STATE_VEC_SIZE; ++i )\n  {\n    y_[ i ] = s.y_[ i ];\n  }\n}\n\nnest::hh_psc_alpha_gap::State_& nest::hh_psc_alpha_gap::State_::operator=(\n  const State_& s )\n{\n  assert( this != &s ); // would be bad logical error in program\n  for ( size_t i = 0; i < STATE_VEC_SIZE; ++i )\n  {\n    y_[ i ] = s.y_[ i ];\n  }\n  r_ = s.r_;\n  return *this;\n}\n\n/* ----------------------------------------------------------------\n * Parameter and state extractions and manipulation functions\n * ---------------------------------------------------------------- */\n\nvoid\nnest::hh_psc_alpha_gap::Parameters_::get( DictionaryDatum& d ) const\n{\n  def< double >( d, names::t_ref, t_ref_ );\n  def< double >( d, names::g_Na, g_Na );\n  def< double >( d, names::g_Kv1, g_Kv1 );\n  def< double >( d, names::g_Kv3, g_Kv3 );\n  def< double >( d, names::g_L, g_L );\n  def< double >( d, names::E_Na, E_Na );\n  def< double >( d, names::E_K, E_K );\n  def< double >( d, names::E_L, E_L );\n  def< double >( d, names::C_m, C_m );\n  def< double >( d, names::tau_syn_ex, tau_synE );\n  def< double >( d, names::tau_syn_in, tau_synI );\n  def< double >( d, names::I_e, I_e );\n}\n\nvoid\nnest::hh_psc_alpha_gap::Parameters_::set( const DictionaryDatum& d )\n{\n  updateValue< double >( d, names::t_ref, t_ref_ );\n  updateValue< double >( d, names::C_m, C_m );\n  updateValue< double >( d, names::g_Na, g_Na );\n  updateValue< double >( d, names::E_Na, E_Na );\n  updateValue< double >( d, names::g_Kv1, g_Kv1 );\n  updateValue< double >( d, names::g_Kv3, g_Kv3 );\n  updateValue< double >( d, names::E_K, E_K );\n  updateValue< double >( d, names::g_L, g_L );\n  updateValue< double >( d, names::E_L, E_L );\n\n  updateValue< double >( d, names::tau_syn_ex, tau_synE );\n  updateValue< double >( d, names::tau_syn_in, tau_synI );\n\n  updateValue< double >( d, names::I_e, I_e );\n  if ( C_m <= 0 )\n  {\n    throw BadProperty( \"Capacitance must be strictly positive.\" );\n  }\n  if ( t_ref_ < 0 )\n  {\n    throw BadProperty( \"Refractory time cannot be negative.\" );\n  }\n  if ( tau_synE <= 0 || tau_synI <= 0 )\n  {\n    throw BadProperty( \"All time constants must be strictly positive.\" );\n  }\n  if ( g_Kv1 < 0 || g_Kv3 < 0 || g_Na < 0 || g_L < 0 )\n  {\n    throw BadProperty( \"All conductances must be non-negative.\" );\n  }\n}\n\nvoid\nnest::hh_psc_alpha_gap::State_::get( DictionaryDatum& d ) const\n{\n  def< double >( d, names::V_m, y_[ V_M ] );\n  def< double >( d, names::Act_m, y_[ HH_M ] );\n  def< double >( d, names::Act_h, y_[ HH_H ] );\n  def< double >( d, names::Inact_n, y_[ HH_N ] );\n  def< double >( d, names::Inact_p, y_[ HH_P ] );\n}\n\nvoid\nnest::hh_psc_alpha_gap::State_::set( const DictionaryDatum& d )\n{\n  updateValue< double >( d, names::V_m, y_[ V_M ] );\n  updateValue< double >( d, names::Act_m, y_[ HH_M ] );\n  updateValue< double >( d, names::Act_h, y_[ HH_H ] );\n  updateValue< double >( d, names::Inact_n, y_[ HH_N ] );\n  updateValue< double >( d, names::Inact_p, y_[ HH_P ] );\n  if ( y_[ HH_M ] < 0 || y_[ HH_H ] < 0 || y_[ HH_N ] < 0 || y_[ HH_P ] < 0 )\n  {\n    throw BadProperty( \"All (in)activation variables must be non-negative.\" );\n  }\n}\n\nnest::hh_psc_alpha_gap::Buffers_::Buffers_( hh_psc_alpha_gap& n )\n  : logger_( n )\n  , s_( 0 )\n  , c_( 0 )\n  , e_( 0 )\n{\n  // Initialization of the remaining members is deferred to\n  // init_buffers_().\n}\n\nnest::hh_psc_alpha_gap::Buffers_::Buffers_( const Buffers_&,\n  hh_psc_alpha_gap& n )\n  : logger_( n )\n  , s_( 0 )\n  , c_( 0 )\n  , e_( 0 )\n{\n  // Initialization of the remaining members is deferred to\n  // init_buffers_().\n}\n\n/* ----------------------------------------------------------------\n * Default and copy constructor for node, and destructor\n * ---------------------------------------------------------------- */\n\nnest::hh_psc_alpha_gap::hh_psc_alpha_gap()\n  : Archiving_Node()\n  , P_()\n  , S_( P_ )\n  , B_( *this )\n{\n  recordablesMap_.create();\n  Node::set_node_uses_wfr( kernel().simulation_manager.use_wfr() );\n}\n\nnest::hh_psc_alpha_gap::hh_psc_alpha_gap( const hh_psc_alpha_gap& n )\n  : Archiving_Node( n )\n  , P_( n.P_ )\n  , S_( n.S_ )\n  , B_( n.B_, *this )\n{\n  Node::set_node_uses_wfr( kernel().simulation_manager.use_wfr() );\n}\n\nnest::hh_psc_alpha_gap::~hh_psc_alpha_gap()\n{\n  // GSL structs may not have been allocated, so we need to protect destruction\n  if ( B_.s_ )\n  {\n    gsl_odeiv_step_free( B_.s_ );\n  }\n  if ( B_.c_ )\n  {\n    gsl_odeiv_control_free( B_.c_ );\n  }\n  if ( B_.e_ )\n  {\n    gsl_odeiv_evolve_free( B_.e_ );\n  }\n}\n\n/* ----------------------------------------------------------------\n * Node initialization functions\n * ---------------------------------------------------------------- */\n\nvoid\nnest::hh_psc_alpha_gap::init_state_( const Node& proto )\n{\n  const hh_psc_alpha_gap& pr = downcast< hh_psc_alpha_gap >( proto );\n  S_ = pr.S_;\n}\n\nvoid\nnest::hh_psc_alpha_gap::init_buffers_()\n{\n  B_.spike_exc_.clear(); // includes resize\n  B_.spike_inh_.clear(); // includes resize\n  B_.currents_.clear();  // includes resize\n\n  // allocate strucure for gap events here\n  // function is called from Scheduler::prepare_nodes() before the\n  // first call to update\n  // so we already know which interpolation scheme to use according\n  // to the properties of this neurons\n  // determine size of structure depending on interpolation scheme\n  // and unsigned int Scheduler::min_delay() (number of simulation time steps\n  // per min_delay step)\n\n  // resize interpolation_coefficients depending on interpolation order\n  const size_t quantity = kernel().connection_manager.get_min_delay()\n    * ( kernel().simulation_manager.get_wfr_interpolation_order() + 1 );\n\n  B_.interpolation_coefficients.resize( quantity, 0.0 );\n\n  B_.last_y_values.resize( kernel().connection_manager.get_min_delay(), 0.0 );\n\n  B_.sumj_g_ij_ = 0.0;\n\n  Archiving_Node::clear_history();\n\n  B_.logger_.reset();\n\n  B_.step_ = Time::get_resolution().get_ms();\n  B_.IntegrationStep_ = B_.step_;\n\n  if ( B_.s_ == 0 )\n  {\n    B_.s_ =\n      gsl_odeiv_step_alloc( gsl_odeiv_step_rkf45, State_::STATE_VEC_SIZE );\n  }\n  else\n  {\n    gsl_odeiv_step_reset( B_.s_ );\n  }\n\n  if ( B_.c_ == 0 )\n  {\n    B_.c_ = gsl_odeiv_control_y_new( 1e-6, 0.0 );\n  }\n  else\n  {\n    gsl_odeiv_control_init( B_.c_, 1e-6, 0.0, 1.0, 0.0 );\n  }\n\n  if ( B_.e_ == 0 )\n  {\n    B_.e_ = gsl_odeiv_evolve_alloc( State_::STATE_VEC_SIZE );\n  }\n  else\n  {\n    gsl_odeiv_evolve_reset( B_.e_ );\n  }\n\n  B_.sys_.function = hh_psc_alpha_gap_dynamics;\n  B_.sys_.jacobian = NULL;\n  B_.sys_.dimension = State_::STATE_VEC_SIZE;\n  B_.sys_.params = reinterpret_cast< void* >( this );\n\n  B_.I_stim_ = 0.0;\n}\n\nvoid\nnest::hh_psc_alpha_gap::calibrate()\n{\n  // ensures initialization in case mm connected after Simulate\n  B_.logger_.init();\n\n  V_.PSCurrInit_E_ = 1.0 * numerics::e / P_.tau_synE;\n  V_.PSCurrInit_I_ = 1.0 * numerics::e / P_.tau_synI;\n  V_.RefractoryCounts_ = Time( Time::ms( P_.t_ref_ ) ).get_steps();\n  // since t_ref_ >= 0, this can only fail in error\n  assert( V_.RefractoryCounts_ >= 0 );\n}\n\n/* ----------------------------------------------------------------\n * Update and spike handling functions\n * ---------------------------------------------------------------- */\n\nbool\nnest::hh_psc_alpha_gap::update_( Time const& origin,\n  const long from,\n  const long to,\n  const bool wfr_update )\n{\n\n  assert(\n    to >= 0 && ( delay ) from < kernel().connection_manager.get_min_delay() );\n  assert( from < to );\n\n  bool done = true;\n  const size_t interpolation_order =\n    kernel().simulation_manager.get_wfr_interpolation_order();\n  const double wfr_tol = kernel().simulation_manager.get_wfr_tol();\n\n  // allocate memory to store the new interpolation coefficients\n  // to be sent by gap event\n  const size_t quantity =\n    kernel().connection_manager.get_min_delay() * ( interpolation_order + 1 );\n  std::vector< double > new_coefficients( quantity, 0.0 );\n\n  // parameters needed for piecewise interpolation\n  double y_i = 0.0, y_ip1 = 0.0, hf_i = 0.0, hf_ip1 = 0.0;\n  double f_temp[ State_::STATE_VEC_SIZE ];\n\n  for ( long lag = from; lag < to; ++lag )\n  {\n\n    // B_.lag is needed by hh_psc_alpha_gap_dynamics to\n    // determine the current section\n    B_.lag_ = lag;\n\n    if ( wfr_update )\n    {\n      y_i = S_.y_[ State_::V_M ];\n      if ( interpolation_order == 3 )\n      {\n        hh_psc_alpha_gap_dynamics(\n          0, S_.y_, f_temp, reinterpret_cast< void* >( this ) );\n        hf_i = B_.step_ * f_temp[ State_::V_M ];\n      }\n    }\n\n    double t = 0.0;\n    const double U_old = S_.y_[ State_::V_M ];\n\n    // numerical integration with adaptive step size control:\n    // ------------------------------------------------------\n    // gsl_odeiv_evolve_apply performs only a single numerical\n    // integration step, starting from t and bounded by step;\n    // the while-loop ensures integration over the whole simulation\n    // step (0, step] if more than one integration step is needed due\n    // to a small integration step size;\n    // note that (t+IntegrationStep > step) leads to integration over\n    // (t, step] and afterwards setting t to step, but it does not\n    // enforce setting IntegrationStep to step-t; this is of advantage\n    // for a consistent and efficient integration across subsequent\n    // simulation intervals\n    while ( t < B_.step_ )\n    {\n      const int status = gsl_odeiv_evolve_apply( B_.e_,\n        B_.c_,\n        B_.s_,\n        &B_.sys_,             // system of ODE\n        &t,                   // from t\n        B_.step_,             // to t <= step\n        &B_.IntegrationStep_, // integration step size\n        S_.y_ );              // neuronal state\n      if ( status != GSL_SUCCESS )\n      {\n        throw GSLSolverFailure( get_name(), status );\n      }\n    }\n\n    if ( not wfr_update )\n    {\n      S_.y_[ State_::DI_EXC ] +=\n        B_.spike_exc_.get_value( lag ) * V_.PSCurrInit_E_;\n      S_.y_[ State_::DI_INH ] +=\n        B_.spike_inh_.get_value( lag ) * V_.PSCurrInit_I_;\n      // sending spikes: crossing 0 mV, pseudo-refractoriness and local\n      // maximum...\n      // refractory?\n      if ( S_.r_ > 0 )\n      {\n        --S_.r_;\n      }\n      else\n        // (    threshold    &&     maximum       )\n        if ( S_.y_[ State_::V_M ] >= 0 && U_old > S_.y_[ State_::V_M ] )\n      {\n        S_.r_ = V_.RefractoryCounts_;\n\n        set_spiketime( Time::step( origin.get_steps() + lag + 1 ) );\n\n        SpikeEvent se;\n        kernel().event_delivery_manager.send( *this, se, lag );\n      }\n\n      // log state data\n      B_.logger_.record_data( origin.get_steps() + lag );\n\n      // set new input current\n      B_.I_stim_ = B_.currents_.get_value( lag );\n    }\n    else // if(wfr_update)\n    {\n      S_.y_[ State_::DI_EXC ] +=\n        B_.spike_exc_.get_value_wfr_update( lag ) * V_.PSCurrInit_E_;\n      S_.y_[ State_::DI_INH ] +=\n        B_.spike_inh_.get_value_wfr_update( lag ) * V_.PSCurrInit_I_;\n      // check deviation from last iteration\n      done = ( fabs( S_.y_[ State_::V_M ] - B_.last_y_values[ lag ] )\n               <= wfr_tol ) && done;\n      B_.last_y_values[ lag ] = S_.y_[ State_::V_M ];\n\n      // update different interpolations\n\n      // constant term is the same for each interpolation order\n      new_coefficients[ lag * ( interpolation_order + 1 ) + 0 ] = y_i;\n\n      switch ( interpolation_order )\n      {\n      case 0:\n        break;\n\n      case 1:\n        y_ip1 = S_.y_[ State_::V_M ];\n\n        new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = y_ip1 - y_i;\n        break;\n\n      case 3:\n        y_ip1 = S_.y_[ State_::V_M ];\n        hh_psc_alpha_gap_dynamics(\n          B_.step_, S_.y_, f_temp, reinterpret_cast< void* >( this ) );\n        hf_ip1 = B_.step_ * f_temp[ State_::V_M ];\n\n        new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = hf_i;\n        new_coefficients[ lag * ( interpolation_order + 1 ) + 2 ] =\n          -3 * y_i + 3 * y_ip1 - 2 * hf_i - hf_ip1;\n        new_coefficients[ lag * ( interpolation_order + 1 ) + 3 ] =\n          2 * y_i - 2 * y_ip1 + hf_i + hf_ip1;\n        break;\n\n      default:\n        throw BadProperty( \"Interpolation order must be 0, 1, or 3.\" );\n      }\n    }\n\n\n  } // end for-loop\n\n  // if not wfr_update perform constant extrapolation and reset last_y_values\n  if ( not wfr_update )\n  {\n    for ( long temp = from; temp < to; ++temp )\n    {\n      new_coefficients[ temp * ( interpolation_order + 1 ) + 0 ] =\n        S_.y_[ State_::V_M ];\n    }\n\n    B_.last_y_values.clear();\n    B_.last_y_values.resize( kernel().connection_manager.get_min_delay(), 0.0 );\n  }\n\n  // Send gap-event\n  GapJunctionEvent ge;\n  ge.set_coeffarray( new_coefficients );\n  kernel().event_delivery_manager.send_secondary( *this, ge );\n\n  // Reset variables\n  B_.sumj_g_ij_ = 0.0;\n  B_.interpolation_coefficients.clear();\n  B_.interpolation_coefficients.resize( quantity, 0.0 );\n\n  return done;\n}\n\nvoid\nnest::hh_psc_alpha_gap::handle( SpikeEvent& e )\n{\n  assert( e.get_delay() > 0 );\n\n  if ( e.get_weight() > 0.0 )\n  {\n    B_.spike_exc_.add_value( e.get_rel_delivery_steps(\n                               kernel().simulation_manager.get_slice_origin() ),\n      e.get_weight() * e.get_multiplicity() );\n  }\n  else\n  {\n    B_.spike_inh_.add_value( e.get_rel_delivery_steps(\n                               kernel().simulation_manager.get_slice_origin() ),\n      e.get_weight() * e.get_multiplicity() );\n  } // current input, keep negative weight\n}\n\nvoid\nnest::hh_psc_alpha_gap::handle( CurrentEvent& e )\n{\n  assert( e.get_delay() > 0 );\n\n  const double c = e.get_current();\n  const double w = e.get_weight();\n\n  // add weighted current; HEP 2002-10-04\n  B_.currents_.add_value(\n    e.get_rel_delivery_steps( kernel().simulation_manager.get_slice_origin() ),\n    w * c );\n}\n\nvoid\nnest::hh_psc_alpha_gap::handle( DataLoggingRequest& e )\n{\n  B_.logger_.handle( e );\n}\n\nvoid\nnest::hh_psc_alpha_gap::handle( GapJunctionEvent& e )\n{\n\n  B_.sumj_g_ij_ += e.get_weight();\n\n  size_t i = 0;\n  std::vector< unsigned int >::iterator it = e.begin();\n  // The call to get_coeffvalue( it ) in this loop also advances the iterator it\n  while ( it != e.end() )\n  {\n    B_.interpolation_coefficients[ i ] +=\n      e.get_weight() * e.get_coeffvalue( it );\n    i++;\n  }\n}\n\n#endif // HAVE_GSL\n",
+			"file": "hh_psc_alpha_gap.cpp",
+			"file_size": 23233,
+			"file_write_time": 131467168807305140,
+			"settings":
+			{
+				"buffer_size": 23233,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "/*\n *  hh_psc_alpha_gap.h\n *\n *  This file is part of NEST.\n *\n *  Copyright (C) 2004 The NEST Initiative\n *\n *  NEST is free software: you can redistribute it and/or modify\n *  it under the terms of the GNU General Public License as published by\n *  the Free Software Foundation, either version 2 of the License, or\n *  (at your option) any later version.\n *\n *  NEST is distributed in the hope that it will be useful,\n *  but WITHOUT ANY WARRANTY; without even the implied warranty of\n *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n *  GNU General Public License for more details.\n *\n *  You should have received a copy of the GNU General Public License\n *  along with NEST.  If not, see <http://www.gnu.org/licenses/>.\n *\n */\n\n#ifndef HH_PSC_ALPHA_GAP_H\n#define HH_PSC_ALPHA_GAP_H\n\n#include \"config.h\"\n\n#ifdef HAVE_GSL\n\n// C includes:\n#include <gsl/gsl_errno.h>\n#include <gsl/gsl_matrix.h>\n#include <gsl/gsl_odeiv.h>\n#include <gsl/gsl_sf_exp.h>\n\n// Includes from nestkernel:\n#include \"archiving_node.h\"\n#include \"connection.h\"\n#include \"event.h\"\n#include \"nest_types.h\"\n#include \"node.h\"\n#include \"ring_buffer.h\"\n#include \"recordables_map.h\"\n#include \"universal_data_logger.h\"\n#include \"name.h\"\n\nnamespace nest\n{\n\n/**\n * Function computing right-hand side of ODE for GSL solver.\n * @note Must be declared here so we can befriend it in class.\n * @note Must have C-linkage for passing to GSL. Internally, it is\n *       a first-class C++ function, but cannot be a member function\n *       because of the C-linkage.\n * @note No point in declaring it inline, since it is called\n *       through a function pointer.\n * @param void* Pointer to model neuron instance.\n */\nextern \"C\" int\nhh_psc_alpha_gap_dynamics( double, const double*, double*, void* );\n\n/* BeginDocumentation\nName: hh_psc_alpha_gap - Hodgkin Huxley neuron model with gap-junction support.\n\nDescription:\n\n hh_psc_alpha_gap is an implementation of a spiking neuron using the\n Hodkin-Huxley formalism. In contrast to hh_psc_alpha the implementation\n additionally supports gap junctions.\n\n\n (1) Post-syaptic currents\n Incoming spike events induce a post-synaptic change of current modelled\n by an alpha function. The alpha function is normalised such that an event of\n weight 1.0 results in a peak current of 1 pA.\n\n (2) Spike Detection\n Spike detection is done by a combined threshold-and-local-maximum search: if\n there is a local maximum above a certain threshold of the membrane potential,\n it is considered a spike.\n\n (3) Gap Junctions\n Gap Junctions are implemented by a gap current of the form g_ij( V_i - V_j).\n\nParameters:\n\n The following parameters can be set in the status dictionary.\n\n V_m        double - Membrane potential in mV\n E_L        double - Resting membrane potential in mV.\n g_L        double - Leak conductance in nS.\n C_m        double - Capacity of the membrane in pF.\n tau_syn_ex double - Rise time of the excitatory synaptic alpha function in ms.\n tau_syn_in double - Rise time of the inhibitory synaptic alpha function in ms.\n E_Na       double - Sodium reversal potential in mV.\n g_Na       double - Sodium peak conductance in nS.\n E_K        double - Potassium reversal potential in mV.\n g_Kv1      double - Potassium peak conductance in nS.\n g_Kv3      double - Potassium peak conductance in nS.\n Act_m      double - Activation variable m\n Act_h      double - Activation variable h\n Inact_n    double - Inactivation variable n\n I_e        double - Constant external input current in pA.\n\nReferences:\n\n Spiking Neuron Models:\n Single Neurons, Populations, Plasticity\n Wulfram Gerstner, Werner Kistler,  Cambridge University Press\n\n Mancilla, J. G., Lewis, T. J., Pinto, D. J.,\n Rinzel, J., and Connors, B. W.,\n Synchronization of electrically coupled pairs\n of inhibitory interneurons in neocortex,\n J. Neurosci. 27, 2058-2073 (2007),\n doi: 10.1523/JNEUROSCI.2715-06.2007 (parameters taken from here)\n\n Hodgkin, A. L. and Huxley, A. F.,\n A Quantitative Description of Membrane Current\n and Its Application to Conduction and Excitation in Nerve,\n Journal of Physiology, 117, 500-544 (1952)\n\n Hahne, J., Helias, M., Kunkel, S., Igarashi, J.,\n Bolten, M., Frommer, A. and Diesmann, M.,\n A unified framework for spiking and gap-junction interactions\n in distributed neuronal network simulations,\n Front. Neuroinform. 9:22. (2015),\n doi: 10.3389/fninf.2015.00022\n\nSends: SpikeEvent, GapJunctionEvent\n\nReceives: SpikeEvent, GapJunctionEvent, CurrentEvent, DataLoggingRequest\n\nAuthor: Jan Hahne, Moritz Helias, Susanne Kunkel\nSeeAlso: hh_psc_alpha, hh_cond_exp_traub, gap_junction\n*/\n\nclass hh_psc_alpha_gap : public Archiving_Node\n{\n\npublic:\n  typedef Node base;\n\n  hh_psc_alpha_gap();\n  hh_psc_alpha_gap( const hh_psc_alpha_gap& );\n  ~hh_psc_alpha_gap();\n\n  /**\n   * Import sets of overloaded virtual functions.\n   * @see Technical Issues / Virtual Functions: Overriding, Overloading, and\n   * Hiding\n   */\n  using Node::handle;\n  using Node::handles_test_event;\n  using Node::sends_secondary_event;\n\n  port send_test_event( Node& target, rport receptor_type, synindex, bool );\n\n\n  void handle( SpikeEvent& );\n  void handle( CurrentEvent& );\n  void handle( DataLoggingRequest& );\n  void handle( GapJunctionEvent& );\n\n  port handles_test_event( SpikeEvent&, rport );\n  port handles_test_event( CurrentEvent&, rport );\n  port handles_test_event( DataLoggingRequest&, rport );\n  port handles_test_event( GapJunctionEvent&, rport );\n\n  void\n  sends_secondary_event( GapJunctionEvent& )\n  {\n  }\n\n  /**\n   * Return membrane potential at time t.\n   * This function is not thread-safe and should not be used in threaded\n   * contexts to access the current membrane potential values.\n   * @param Time the current network time\n   *\n   */\n  double get_potential( Time const& ) const;\n\n  /**\n   * Define current membrane potential.\n   * This function is thread-safe and should be used in threaded\n   * contexts to change the current membrane potential value.\n   * @param Time     the current network time\n   * @param double new value of the mebrane potential\n   *\n   */\n  void set_potential( Time const&, double );\n\n  void get_status( DictionaryDatum& ) const;\n  void set_status( const DictionaryDatum& );\n\nprivate:\n  void init_state_( const Node& proto );\n  void init_buffers_();\n  void calibrate();\n  bool update_( Time const&, const long, const long, const bool );\n  void update( Time const&, const long, const long );\n  bool wfr_update( Time const&, const long, const long );\n\n  // END Boilerplate function declarations ----------------------------\n\n  // Friends --------------------------------------------------------\n\n  // make dynamics function quasi-member\n  friend int hh_psc_alpha_gap_dynamics( double, const double*, double*, void* );\n\n  // The next two classes need to be friend to access the State_ class/member\n  friend class RecordablesMap< hh_psc_alpha_gap >;\n  friend class UniversalDataLogger< hh_psc_alpha_gap >;\n\nprivate:\n  // ----------------------------------------------------------------\n\n  //! Independent parameters\n  struct Parameters_\n  {\n    double t_ref_;   //!< refractory time in ms\n    double g_Na;     //!< Sodium Conductance in nS\n    double g_L;      //!< Leak Conductance in nS\n    double C_m;      //!< Membrane Capacitance in pF\n    double E_Na;     //!< Sodium Reversal Potential in mV\n    double E_K;      //!< Potassium Reversal Potential in mV\n    double E_L;      //!< Leak reversal Potential (aka resting potential) in mV\n    double tau_synE; //!< Synaptic Time Constant Excitatory Synapse in ms\n    double tau_synI; //!< Synaptic Time Constant for Inhibitory Synapse in ms\n    double I_e;      //!< Constant Current in pA\n    // TC\n    double g_Kca;    //!< Potassium Conductance in nS\n    double g_Cal;\n    double g_Cah;\n    double g_Na;\n    double g_K;\n    double g_H;\n    double E_H;\n    double E_Ca;\n\n    Parameters_(); //!< Sets default parameter values\n\n    void get( DictionaryDatum& ) const; //!< Store current values in dictionary\n    void set( const DictionaryDatum& ); //!< Set values from dicitonary\n  };\n\npublic:\n  // ----------------------------------------------------------------\n\n  /**\n   * State variables of the model.\n   * @note Copy constructor and assignment operator required because\n   *       of C-style array.\n   */\n  struct State_\n  {\n\n    /**\n     * Enumeration identifying elements in state array State_::y_.\n     * The state vector must be passed to GSL as a C array. This enum\n     * identifies the elements of the vector. It must be public to be\n     * accessible from the iteration function.\n     */\n    enum StateVecElems\n    {\n      V_M = 0,\n      HH_M,   // 1\n      HH_H,   // 2\n      HH_N,   // 3\n      HH_P,   // 4\n      DI_EXC, // 5\n      I_EXC,  // 6\n      DI_INH, // 7\n      I_INH,  // 8\n      HH_L,\n      HH_Q,\n      HH_R,\n      HH_S,\n      STATE_VEC_SIZE\n    };\n\n    //! neuron state, must be C-array for GSL solver\n    double y_[ STATE_VEC_SIZE ];\n    int r_; //!< number of refractory steps remaining\n\n    State_( const Parameters_& ); //!< Default initialization\n    State_( const State_& );\n    State_& operator=( const State_& );\n\n    void get( DictionaryDatum& ) const;\n    void set( const DictionaryDatum& );\n  };\n\n  // ----------------------------------------------------------------\n\nprivate:\n  /**\n   * Buffers of the model.\n   */\n  struct Buffers_\n  {\n    Buffers_( hh_psc_alpha_gap& ); //!<Sets buffer pointers to 0\n    //! Sets buffer pointers to 0\n    Buffers_( const Buffers_&, hh_psc_alpha_gap& );\n\n    //! Logger for all analog data\n    UniversalDataLogger< hh_psc_alpha_gap > logger_;\n\n    /** buffers and sums up incoming spikes/currents */\n    RingBuffer spike_exc_;\n    RingBuffer spike_inh_;\n    RingBuffer currents_;\n\n    /** GSL ODE stuff */\n    gsl_odeiv_step* s_;    //!< stepping function\n    gsl_odeiv_control* c_; //!< adaptive stepsize control function\n    gsl_odeiv_evolve* e_;  //!< evolution function\n    gsl_odeiv_system sys_; //!< struct describing system\n\n    // IntergrationStep_ should be reset with the neuron on ResetNetwork,\n    // but remain unchanged during calibration. Since it is initialized with\n    // step_, and the resolution cannot change after nodes have been created,\n    // it is safe to place both here.\n    double step_;            //!< step size in ms\n    double IntegrationStep_; //!< current integration time step, updated by GSL\n\n    // remembers current lag for piecewise interpolation\n    long lag_;\n    // remembers y_values from last wfr_update\n    std::vector< double > last_y_values;\n    // summarized gap weight\n    double sumj_g_ij_;\n    // summarized coefficients of the interpolation polynomial\n    std::vector< double > interpolation_coefficients;\n\n    /**\n     * Input current injected by CurrentEvent.\n     * This variable is used to transport the current applied into the\n     * _dynamics function computing the derivative of the state vector.\n     * It must be a part of Buffers_, since it is initialized once before\n     * the first simulation, but not modified before later Simulate calls.\n     */\n    double I_stim_;\n  };\n\n  // ----------------------------------------------------------------\n\n  /**\n   * Internal variables of the model.\n   */\n  struct Variables_\n  {\n    /** initial value to normalise excitatory synaptic current */\n    double PSCurrInit_E_;\n\n    /** initial value to normalise inhibitory synaptic current */\n    double PSCurrInit_I_;\n\n    int RefractoryCounts_;\n  };\n\n  // Access functions for UniversalDataLogger -------------------------------\n\n  //! Read out state vector elements, used by UniversalDataLogger\n  template < State_::StateVecElems elem >\n  double\n  get_y_elem_() const\n  {\n    return S_.y_[ elem ];\n  }\n\n  // ----------------------------------------------------------------\n\n  Parameters_ P_;\n  State_ S_;\n  Variables_ V_;\n  Buffers_ B_;\n\n  //! Mapping of recordables names to access functions\n  static RecordablesMap< hh_psc_alpha_gap > recordablesMap_;\n};\n\ninline void\nhh_psc_alpha_gap::update( Time const& origin, const long from, const long to )\n{\n  update_( origin, from, to, false );\n}\n\ninline bool\nhh_psc_alpha_gap::wfr_update( Time const& origin,\n  const long from,\n  const long to )\n{\n  bool done = false;\n  State_ old_state = S_; // save state before wfr_update\n  done = update_( origin, from, to, true );\n  S_ = old_state; // restore old state\n\n  return done;\n}\n\ninline port\nhh_psc_alpha_gap::send_test_event( Node& target,\n  rport receptor_type,\n  synindex,\n  bool )\n{\n  SpikeEvent se;\n  se.set_sender( *this );\n  return target.handles_test_event( se, receptor_type );\n}\n\n\ninline port\nhh_psc_alpha_gap::handles_test_event( SpikeEvent&, rport receptor_type )\n{\n  if ( receptor_type != 0 )\n  {\n    throw UnknownReceptorType( receptor_type, get_name() );\n  }\n  return 0;\n}\n\ninline port\nhh_psc_alpha_gap::handles_test_event( CurrentEvent&, rport receptor_type )\n{\n  if ( receptor_type != 0 )\n  {\n    throw UnknownReceptorType( receptor_type, get_name() );\n  }\n  return 0;\n}\n\ninline port\nhh_psc_alpha_gap::handles_test_event( DataLoggingRequest& dlr,\n  rport receptor_type )\n{\n  if ( receptor_type != 0 )\n  {\n    throw UnknownReceptorType( receptor_type, get_name() );\n  }\n  return B_.logger_.connect_logging_device( dlr, recordablesMap_ );\n}\n\ninline port\nhh_psc_alpha_gap::handles_test_event( GapJunctionEvent&, rport receptor_type )\n{\n  if ( receptor_type != 0 )\n  {\n    throw UnknownReceptorType( receptor_type, get_name() );\n  }\n  return 0;\n}\n\ninline void\nhh_psc_alpha_gap::get_status( DictionaryDatum& d ) const\n{\n  P_.get( d );\n  S_.get( d );\n  Archiving_Node::get_status( d );\n\n  ( *d )[ names::recordables ] = recordablesMap_.get_list();\n}\n\ninline void\nhh_psc_alpha_gap::set_status( const DictionaryDatum& d )\n{\n  Parameters_ ptmp = P_; // temporary copy in case of errors\n  ptmp.set( d );         // throws if BadProperty\n  State_ stmp = S_;      // temporary copy in case of errors\n  stmp.set( d );         // throws if BadProperty\n\n  // We now know that (ptmp, stmp) are consistent. We do not\n  // write them back to (P_, S_) before we are also sure that\n  // the properties to be set in the parent class are internally\n  // consistent.\n  Archiving_Node::set_status( d );\n\n  // if we get here, temporaries contain consistent set of properties\n  P_ = ptmp;\n  S_ = stmp;\n}\nnamespace names\n{\n  extern const Name l;\n  extern const Name q;\n  extern const Name r;\n  extern const Name s;\n}\n} // namespace\n\n#endif // HAVE_GSL\n#endif // HH_PSC_ALPHA_GAP_H\n",
+			"file": "hh_psc_alpha_gap.h",
+			"file_size": 14464,
+			"file_write_time": 131464463577171503,
+			"settings":
+			{
+				"buffer_size": 14464,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/home/tom/nest-2.12.0/nestkernel/recordables_map.h",
+			"settings":
+			{
+				"buffer_size": 3770,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 54.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 404.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/tom/nest-2.12.0",
+		"/home/tom/nest-2.12.0/nestkernel",
+		"/home/tom/code/NestModule"
+	],
+	"file_history":
+	[
+		"/home/tom/nest-2.12.0/sli/booldatum.cc",
+		"/home/tom/nest-2.12.0/sli/name.h",
+		"/home/tom/nest-2.12.0/nestkernel/nest_names.cpp",
+		"/home/tom/siamltexmm.layout-master/layouts/siamonline.layout",
+		"/home/tom/Downloads/siamonline_1116 (1)/siamonline1116.cls",
+		"/home/tom/matlab/cns_sync.sh",
+		"/home/tom/nest-simulator/MyModule/hh_psc_alpha_gap.cpp",
+		"/home/tom/.config/sublime-text-3/Packages/Default/Preferences.sublime-settings",
+		"/media/Storage/Dropbox/matlab_work/rf_poster_siam17.m"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 93.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"siads",
+			"thispagestyle",
+			"myhead",
+			"mkbo",
+			"dvi",
+			"lineno",
+			"list",
+			"listof",
+			"siads",
+			"siamjourn",
+			"bst",
+			"input",
+			"'([A-Za-z0-9_{}\\\\ ]*)'",
+			"'([A-Za-z0-9_{} ]*)'",
+			"'([A-Za-z0-9_ ]*)'",
+			"'([A-Za-z0-9 ]*)'",
+			"'([A-Za-z0-9 ])'",
+			"[\\n]{2,}",
+			"[^\\x21-\\x7E\\n]{2,}",
+			"[^\\x21-\\x7E]{2,}",
+			"[ \\t\\r\\n\\v\\f]{2,}",
+			"^[ \\t]+|[ \\t]+$"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": true,
+		"replace_history":
+		[
+			"'\\$\\1\\$'",
+			"'$\\1$'",
+			"\\n",
+			""
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 2,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "hh_psc_alpha_gap.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 23233,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2843,
+								2843
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "hh_psc_alpha_gap.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 14464,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4612,
+								4612
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2091.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/home/tom/nest-2.12.0/nestkernel/recordables_map.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3770,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2153,
+								2153
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 25.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "NestModule.sublime-project",
+	"replace":
+	{
+		"height": 46.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 302.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
