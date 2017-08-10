@@ -46,9 +46,10 @@
 #include "doubledatum.h"
 #include "integerdatum.h"
 
+using namespace nest;
 
-nest::RecordablesMap< nest::hh_sdl_alpha_gap >
-  nest::hh_sdl_alpha_gap::recordablesMap_;
+nest::RecordablesMap< nest_tc::hh_sdl_alpha_gap >
+  nest_tc::hh_sdl_alpha_gap::recordablesMap_;
 
 namespace nest
 {
@@ -56,48 +57,48 @@ namespace nest
 // for each quantity to be recorded.
 template <>
 void
-RecordablesMap< hh_sdl_alpha_gap >::create()
+RecordablesMap< nest_tc::hh_sdl_alpha_gap >::create()
 {
   // use standard names whereever you can for consistency!
   insert_( names::V_m,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::V_M > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::V_M > );
   insert_( names::I_syn_ex,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::I_EXC > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::I_EXC > );
   insert_( names::I_syn_in,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::I_INH > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::I_INH > );
   insert_( names::Act_m,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_M > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_M > );
   insert_( names::Act_h,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_H > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_H > );
   insert_( names::Inact_n,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_N > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_N > );
   insert_( names::Inact_p,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_P > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_P > );
   // TC
-  insert_( names::l,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_L > );
-  insert_( names::q,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_Q > );
-  insert_( names::r,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_R > );
-  insert_( names::s,
-    &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_S > );
+  // insert_( names::l,
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_L > );
+  // insert_( names::q,
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_Q > );
+  // insert_( names::r,
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_R > );
+  // insert_( names::s,
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_S > );
 
 }
 
 extern "C" int
-hh_sdl_alpha_gap_dynamics( double time,
+nest_tc::hh_sdl_alpha_gap_dynamics( double time,
   const double y[],
   double f[],
   void* pnode )
 {
   // a shorthand
-  typedef nest::hh_sdl_alpha_gap::State_ S;
+  typedef nest_tc::hh_sdl_alpha_gap::State_ S;
 
   // get access to node so we can almost work as in a member function
   assert( pnode );
-  const nest::hh_sdl_alpha_gap& node =
-    *( reinterpret_cast< nest::hh_sdl_alpha_gap* >( pnode ) );
+  const nest_tc::hh_sdl_alpha_gap& node =
+    *( reinterpret_cast< nest_tc::hh_sdl_alpha_gap* >( pnode ) );
 
   // y[] here is---and must be---the state vector supplied by the integrator,
   // not the state vector in the node, node.S_.y[].
@@ -116,10 +117,10 @@ hh_sdl_alpha_gap_dynamics( double time,
   const double& dI_in = y[ S::DI_INH ];
   const double& I_in = y[ S::I_INH ];
   // TC
-  const double& l = y[ S::HH_ ];
-  const double& q = y[ S::HH_ ];
-  const double& r = y[ S::HH_ ];
-  const double& s = y[ S::HH_ ];
+  const double& l = y[ S::HH_L ];
+  const double& q = y[ S::HH_Q ];
+  const double& r = y[ S::HH_R ];
+  const double& s = y[ S::HH_S ];
 
   // TC
   //Somatic
@@ -246,20 +247,20 @@ hh_sdl_alpha_gap_dynamics( double time,
   return GSL_SUCCESS;
 }
 
-namespace names
-{
-const Name l( "l" );
-const Name q( "q" );
-const Name r( "r" );
-const Name s( "s" );
-}
+// namespace names
+// {
+// const Name l( "l" );
+// const Name q( "q" );
+// const Name r( "r" );
+// const Name s( "s" );
+// }
 }
 
 /* ----------------------------------------------------------------
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
 
-nest::hh_sdl_alpha_gap::Parameters_::Parameters_()
+nest_tc::hh_sdl_alpha_gap::Parameters_::Parameters_()
   : tau_synE( 0.2 ) // ms
   , tau_synI( 2.0 ) // ms
   , I_e( 0.0 )      // pA
@@ -282,7 +283,7 @@ nest::hh_sdl_alpha_gap::Parameters_::Parameters_()
 {
 }
 
-nest::hh_sdl_alpha_gap::State_::State_( const Parameters_& )
+nest_tc::hh_sdl_alpha_gap::State_::State_( const Parameters_& )
   : r_( 0 )
 {
   y_[ 0 ] = -69.60401191631222; // p.E_L;
@@ -297,7 +298,7 @@ nest::hh_sdl_alpha_gap::State_::State_( const Parameters_& )
   // todo
 }
 
-nest::hh_sdl_alpha_gap::State_::State_( const State_& s )
+nest_tc::hh_sdl_alpha_gap::State_::State_( const State_& s )
   : r_( s.r_ )
 {
   for ( size_t i = 0; i < STATE_VEC_SIZE; ++i )
@@ -306,7 +307,7 @@ nest::hh_sdl_alpha_gap::State_::State_( const State_& s )
   }
 }
 
-nest::hh_sdl_alpha_gap::State_& nest::hh_sdl_alpha_gap::State_::operator=(
+nest_tc::hh_sdl_alpha_gap::State_& nest_tc::hh_sdl_alpha_gap::State_::operator=(
   const State_& s )
 {
   assert( this != &s ); // would be bad logical error in program
@@ -323,7 +324,7 @@ nest::hh_sdl_alpha_gap::State_& nest::hh_sdl_alpha_gap::State_::operator=(
  * ---------------------------------------------------------------- */
 
 void
-nest::hh_sdl_alpha_gap::Parameters_::get( DictionaryDatum& d ) const
+nest_tc::hh_sdl_alpha_gap::Parameters_::get( DictionaryDatum& d ) const
 {
   def< double >( d, names::t_ref, t_ref_ );
   def< double >( d, names::g_Na, g_Na );
@@ -340,7 +341,7 @@ nest::hh_sdl_alpha_gap::Parameters_::get( DictionaryDatum& d ) const
 }
 
 void
-nest::hh_sdl_alpha_gap::Parameters_::set( const DictionaryDatum& d )
+nest_tc::hh_sdl_alpha_gap::Parameters_::set( const DictionaryDatum& d )
 {
   updateValue< double >( d, names::t_ref, t_ref_ );
   updateValue< double >( d, names::C_m, C_m );
@@ -375,7 +376,7 @@ nest::hh_sdl_alpha_gap::Parameters_::set( const DictionaryDatum& d )
 }
 
 void
-nest::hh_sdl_alpha_gap::State_::get( DictionaryDatum& d ) const
+nest_tc::hh_sdl_alpha_gap::State_::get( DictionaryDatum& d ) const
 {
   def< double >( d, names::V_m, y_[ V_M ] );
   def< double >( d, names::Act_m, y_[ HH_M ] );
@@ -385,7 +386,7 @@ nest::hh_sdl_alpha_gap::State_::get( DictionaryDatum& d ) const
 }
 
 void
-nest::hh_sdl_alpha_gap::State_::set( const DictionaryDatum& d )
+nest_tc::hh_sdl_alpha_gap::State_::set( const DictionaryDatum& d )
 {
   updateValue< double >( d, names::V_m, y_[ V_M ] );
   updateValue< double >( d, names::Act_m, y_[ HH_M ] );
@@ -398,7 +399,7 @@ nest::hh_sdl_alpha_gap::State_::set( const DictionaryDatum& d )
   }
 }
 
-nest::hh_sdl_alpha_gap::Buffers_::Buffers_( hh_sdl_alpha_gap& n )
+nest_tc::hh_sdl_alpha_gap::Buffers_::Buffers_( hh_sdl_alpha_gap& n )
   : logger_( n )
   , s_( 0 )
   , c_( 0 )
@@ -408,7 +409,7 @@ nest::hh_sdl_alpha_gap::Buffers_::Buffers_( hh_sdl_alpha_gap& n )
   // init_buffers_().
 }
 
-nest::hh_sdl_alpha_gap::Buffers_::Buffers_( const Buffers_&,
+nest_tc::hh_sdl_alpha_gap::Buffers_::Buffers_( const Buffers_&,
   hh_sdl_alpha_gap& n )
   : logger_( n )
   , s_( 0 )
@@ -423,7 +424,7 @@ nest::hh_sdl_alpha_gap::Buffers_::Buffers_( const Buffers_&,
  * Default and copy constructor for node, and destructor
  * ---------------------------------------------------------------- */
 
-nest::hh_sdl_alpha_gap::hh_sdl_alpha_gap()
+nest_tc::hh_sdl_alpha_gap::hh_sdl_alpha_gap()
   : Archiving_Node()
   , P_()
   , S_( P_ )
@@ -433,7 +434,7 @@ nest::hh_sdl_alpha_gap::hh_sdl_alpha_gap()
   Node::set_node_uses_wfr( kernel().simulation_manager.use_wfr() );
 }
 
-nest::hh_sdl_alpha_gap::hh_sdl_alpha_gap( const hh_sdl_alpha_gap& n )
+nest_tc::hh_sdl_alpha_gap::hh_sdl_alpha_gap( const hh_sdl_alpha_gap& n )
   : Archiving_Node( n )
   , P_( n.P_ )
   , S_( n.S_ )
@@ -442,7 +443,7 @@ nest::hh_sdl_alpha_gap::hh_sdl_alpha_gap( const hh_sdl_alpha_gap& n )
   Node::set_node_uses_wfr( kernel().simulation_manager.use_wfr() );
 }
 
-nest::hh_sdl_alpha_gap::~hh_sdl_alpha_gap()
+nest_tc::hh_sdl_alpha_gap::~hh_sdl_alpha_gap()
 {
   // GSL structs may not have been allocated, so we need to protect destruction
   if ( B_.s_ )
@@ -464,14 +465,14 @@ nest::hh_sdl_alpha_gap::~hh_sdl_alpha_gap()
  * ---------------------------------------------------------------- */
 
 void
-nest::hh_sdl_alpha_gap::init_state_( const Node& proto )
+nest_tc::hh_sdl_alpha_gap::init_state_( const Node& proto )
 {
   const hh_sdl_alpha_gap& pr = downcast< hh_sdl_alpha_gap >( proto );
   S_ = pr.S_;
 }
 
 void
-nest::hh_sdl_alpha_gap::init_buffers_()
+nest_tc::hh_sdl_alpha_gap::init_buffers_()
 {
   B_.spike_exc_.clear(); // includes resize
   B_.spike_inh_.clear(); // includes resize
@@ -540,7 +541,7 @@ nest::hh_sdl_alpha_gap::init_buffers_()
 }
 
 void
-nest::hh_sdl_alpha_gap::calibrate()
+nest_tc::hh_sdl_alpha_gap::calibrate()
 {
   // ensures initialization in case mm connected after Simulate
   B_.logger_.init();
@@ -557,7 +558,7 @@ nest::hh_sdl_alpha_gap::calibrate()
  * ---------------------------------------------------------------- */
 
 bool
-nest::hh_sdl_alpha_gap::update_( Time const& origin,
+nest_tc::hh_sdl_alpha_gap::update_( Time const& origin,
   const long from,
   const long to,
   const bool wfr_update )
@@ -737,7 +738,7 @@ nest::hh_sdl_alpha_gap::update_( Time const& origin,
 }
 
 void
-nest::hh_sdl_alpha_gap::handle( SpikeEvent& e )
+nest_tc::hh_sdl_alpha_gap::handle( SpikeEvent& e )
 {
   assert( e.get_delay() > 0 );
 
@@ -756,7 +757,7 @@ nest::hh_sdl_alpha_gap::handle( SpikeEvent& e )
 }
 
 void
-nest::hh_sdl_alpha_gap::handle( CurrentEvent& e )
+nest_tc::hh_sdl_alpha_gap::handle( CurrentEvent& e )
 {
   assert( e.get_delay() > 0 );
 
@@ -770,13 +771,13 @@ nest::hh_sdl_alpha_gap::handle( CurrentEvent& e )
 }
 
 void
-nest::hh_sdl_alpha_gap::handle( DataLoggingRequest& e )
+nest_tc::hh_sdl_alpha_gap::handle( DataLoggingRequest& e )
 {
   B_.logger_.handle( e );
 }
 
 void
-nest::hh_sdl_alpha_gap::handle( GapJunctionEvent& e )
+nest_tc::hh_sdl_alpha_gap::handle( GapJunctionEvent& e )
 {
 
   B_.sumj_g_ij_ += e.get_weight();

@@ -28,7 +28,7 @@
 #include "slimodule.h"
 
 // Put your stuff into your own namespace.
-namespace nest
+namespace nest_tc
 {
 
 /**
