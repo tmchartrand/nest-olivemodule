@@ -192,22 +192,26 @@ private:
     double tau_synE; //!< Synaptic Time Constant Excitatory Synapse in ms
     double tau_synI; //!< Synaptic Time Constant for Inhibitory Synapse in ms
     double I_e;      //!< Constant Current in pA
-    
     double t_ref_;   //!< refractory time in ms
-    double g_Na;     //!< Sodium Conductance in nS
-    double g_L;      //!< Leak Conductance in nS
     double C_m;      //!< Membrane Capacitance in pF
+
+    double E_Ca;
     double E_Na;     //!< Sodium Reversal Potential in mV
     double E_K;      //!< Potassium Reversal Potential in mV
+    double E_H;
     double E_L;      //!< Leak reversal Potential (aka resting potential) in mV
-    // TC
-    double g_Kca;    //!< Potassium Conductance in nS
+ 
+    double g_L;      //!< Leak Conductance in nS
     double g_Cal;
-    double g_Cah;
+    double g_Na;     //!< Sodium Conductance in nS
     double g_K;
     double g_H;
-    double E_H;
-    double E_Ca;
+    double g_Int;  
+    double g_Cah;
+    double g_Ld;
+    double g_Kca;  
+    double p_Ds;
+
 
     Parameters_(); //!< Sets default parameter values
 
@@ -235,18 +239,19 @@ public:
     enum StateVecElems
     {
       V_M = 0,
-      // HH_M,   // 1
-      HH_H,   // 2
-      // HH_N,   // 3
-      // HH_P,   // 4
+      V_D,
+      CCA,
+      K,
+      L,
+      H,
+      N,
+      Q,
+      R,
+      S,
       DI_EXC, // 5
       I_EXC,  // 6
       DI_INH, // 7
       I_INH,  // 8
-      HH_L,
-      HH_Q,
-      HH_R,
-      HH_S,
       STATE_VEC_SIZE
     };
 

@@ -68,22 +68,22 @@ RecordablesMap< nest_tc::hh_sdl_alpha_gap >::create()
   insert_( names::I_syn_in,
     &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::I_INH > );
   // insert_( names::Act_m,
-  //   &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_M > );
+  //   &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::M > );
   insert_( names::Act_h,
-    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_H > );
-  // insert_( names::Inact_n,
-  //   &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_N > );
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::H > );
+  insert_( names::Inact_n,
+    &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::N > );
   // insert_( names::Inact_p,
-  //   &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::HH_P > );
+  //   &nest_tc::hh_sdl_alpha_gap::get_y_elem_< nest_tc::hh_sdl_alpha_gap::State_::P > );
   // TC
   // insert_( names::l,
-  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_L > );
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::L > );
   // insert_( names::q,
-  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_Q > );
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::Q > );
   // insert_( names::r,
-  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_R > );
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::R > );
   // insert_( names::s,
-  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::HH_S > );
+  //   &hh_sdl_alpha_gap::get_y_elem_< hh_sdl_alpha_gap::State_::S > );
 
 }
 } // namespace nest
@@ -110,83 +110,97 @@ nest_tc::hh_sdl_alpha_gap_dynamics( double time,
 
   // shorthand for state variables
   const double& V = y[ S::V_M ];
-  const double& h = y[ S::HH_H ];
+  const double& Vd = y[ S::V_D ];
+  const double& k = y[ S::K ];
+  const double& l = y[ S::L ];
+  const double& h = y[ S::H ];
+  const double& n = y[ S::N ];
+  const double& q = y[ S::Q ];
+  const double& r = y[ S::R ];
+  const double& s = y[ S::S ];
+  const double& cca = y[ S::CCA ];
   const double& dI_ex = y[ S::DI_EXC ];
   const double& I_ex = y[ S::I_EXC ];
   const double& dI_in = y[ S::DI_INH ];
   const double& I_in = y[ S::I_INH ];
-  // TC
-  const double& l = y[ S::HH_L ];
-  const double& q = y[ S::HH_Q ];
-  const double& r = y[ S::HH_R ];
-  const double& s = y[ S::HH_S ];
+
+  // shorthand for params
+  const double& E_Ca = node.P_.E_Ca;
+  const double& E_Na = node.P_.E_Na;    
+  const double& E_K = node.P_.E_K;      
+  const double& E_H = node.P_.E_H;
+  const double& E_L = node.P_.E_L;      
+  const double& g_L = node.P_.g_L;      
+  const double& g_Cal = node.P_.g_Cal;
+  const double& g_Na = node.P_.g_Na;  
+  const double& g_K = node.P_.g_K;
+  const double& g_H = node.P_.g_H;
+  const double& g_Int = node.P_.g_Int;  
+  const double& g_Cah = node.P_.g_Cah;
+  const double& g_Ld = node.P_.g_Ld;
+  const double& g_Kca = node.P_.g_Kca;  
+  const double& p_Ds = node.P_.p_Ds;
 
   // TC
   //Somatic
 
-  //Na
-  // const double a_m =  0.1*(V+41)*(1-std::exp(-(V+41)/10));
-  // const double b_m = 9.0*std::exp(-(V+66)/20);
-  // const double mlim =  a_m*(a_m+b_m);
-  // const double a_h =  5.0*std::exp(-(V+60)/15);
-  // const double b_h =  (V+50)*(1-std::exp(-(V+50)/10));
-  // const double t_h =  170*(a_h + b_h);
-  // const double hlim =  a_h*(a_h+b_h);
+  // Na
+  const double a_m =  0.1*(V+41.)/(1-std::exp(-(V+41.)/10.));
+  const double b_m = 9.0*std::exp(-(V+66.)/20.);
+  const double mlim =  a_m/(a_m+b_m);
+  const double a_h =  5.0*std::exp(-(V+60.)/15.);
+  const double b_h =  (V+50.)/(1-std::exp(-(V+50.)/10.));
+  const double t_h =  170./(a_h + b_h);
+  const double hlim =  a_h/(a_h+b_h);
 
-  const double mlim =  1.0/(1+std::exp(-(V+30)/5.5));
-  const double hlim =  1.0/(1+std::exp((V+70)/5.8));
-  const double t_h =  3*std::exp(-(V+40)/33);
-
-  const double I_na = node.P_.g_Na*(mlim*mlim*mlim)*h*(V-node.P_.E_Na);
+  const double I_na = g_Na*(mlim*mlim*mlim)*h*(V-E_Na);
 
   //K_dr
-  // const double a_n = (V+41)*(1-std::exp(-(V+41)/10));
-  // const double b_n = 12.5*std::exp(-(V+51)/80);
-  // const double nlim = a_n*(a_n+b_n);
-  // const double t_n = 5*(a_n+b_n);
+  const double a_n = (V+41.)/(1.-std::exp(-(V+41.)/10.));
+  const double b_n = 12.5*std::exp(-(V+51.)/80.);
+  const double nlim = a_n/(a_n+b_n);
+  const double t_n = 5./(a_n+b_n);
 
-  const double a_x = (0.13*V+3.25)/(1-std::exp(-(V+25)/10));
-  const double b_x = 1.69*std::exp(-0.0125*V - 0.4375);
-  const double nlim = a_x/(a_x+b_x);
-  // const double t_x = 1*(a_x+b_x);
-
-  const double I_k = node.P_.g_K*(nlim*nlim*nlim*nlim)*(V-node.P_.E_K);
+  const double I_k = g_K*(n*n*n*n)*(V-E_K);
 
 
   //Ca_l
-  const double klim = 1.0/(1+std::exp(-(V+61)/4.2));
-  // t_k = 5;//1/5 dG? (=0 for manor)
-  const double llim = 1.0/(1+std::exp((V+85.5)/8.5));//
-  const double t_l = 35.0 + 20.0*std::exp((V+160)/30)*(1+std::exp((V+84)/7.3));
+  const double klim = 1.0/(1+std::exp(-(V+61.)/4.2));
+  const double t_k = 5.;//1/5 dG? (=0 for manor)
+  const double llim = 1./(1.+std::exp((V+85.5)/8.5));
+  const double t_l = 35. + 20.*std::exp((V+160.)/30.)/(1.+std::exp((V+84.)/7.3));
   // t_l = 40 + 30*std::exp((V+160)/30)*(1+std::exp((V+84)/8.3));// manor
-  const double I_cal = node.P_.g_Cal*(klim*klim*klim)*l*(V-node.P_.E_Ca);
+  const double I_cal = g_Cal*(klim*klim*klim)*l*(V-E_Ca);
 
   //H - very slow
-  const double qlim = 1.0/(1+std::exp((V+75)/5.5));
+  const double qlim = 1./(1.+std::exp((V+75.)/5.5));
   // qlim = 1*(1+std::exp((V+80)/4));//vdg
-  const double t_q = 1.0/(std::exp(-0.086*V-14.6) + std::exp(0.07*V-1.87));
-  const double I_h = node.P_.g_H*q*(V - node.P_.E_H);
+  const double t_q = 1./(std::exp(-0.086*V-14.6) + std::exp(0.07*V-1.87));
+  const double I_h = g_H*q*(V - E_H);
 
   //leak
-  const double I_l = node.P_.g_L*(V-node.P_.E_L);
+  const double I_l = g_L*(V-E_L);
+  const double I_ds = g_Int/p_Ds*(V-Vd);
 
   //Dendritic
 
-  //Ca_h - fast intrinsically, slow to reflect propagation to dendrites
-  const double a_r = 1.6/(1+std::exp(-(V-5)/14));
-  const double b_r = -0.02*(V+8.5)*(1-std::exp((V+8.5)/5)); 
+  //leak, exchange
+  const double I_ld = g_Ld*(Vd-E_L);
+  const double I_sd = g_Int/(1-p_Ds)*(Vd-V);
+
+  //Ca_h 
+  const double a_r = 1.6/(1+std::exp(-(V-5.)/14.));
+  const double b_r = -0.02*(V+8.5)*(1.-std::exp((V+8.5)/5.)); 
   const double rlim = a_r/(a_r+b_r);
-  const double t_r = 5.0/(a_r+b_r);//5/1? (dG)
-  const double I_cah = node.P_.g_Cah*(r*r)*(V-node.P_.E_Ca);
+  const double t_r = 1./(a_r+b_r);//5/1? (dG)
+  const double I_cah = g_Cah*(r*r)*(V-E_Ca);
 
   //K_Ca
-  const double cca = -40.0*I_cah;
   const double a_s = std::min(0.00002*cca,0.01);
   const double b_s = 0.015;
-  // t_s = 1*(a_s+b_s);
-  const double t_s = 13.0+1.0/(a_s+b_s);
-  const double I_kca = node.P_.g_Kca*s*(V-node.P_.E_K);
+  const double t_s = 1./(a_s+b_s);
   const double slim = a_s/(a_s+b_s);
+  const double I_kca = g_Kca*s*(V-E_K);
 
 
   // set I_gap depending on interpolation order
@@ -222,22 +236,22 @@ nest_tc::hh_sdl_alpha_gap_dynamics( double time,
   const double I_gap = gap;
 
   // V dot -- synaptic input are currents, inhib current is negative
-  f[ S::V_M ] = ( -(I_l+I_cal+I_cah+I_na+I_k+I_h+I_kca)
-    + node.B_.I_stim_ + node.P_.I_e + I_ex
-    + I_in + I_gap ) / node.P_.C_m;
+  f[ S::V_M ] = ( -(I_l+I_cal+I_na+I_k+I_h+I_ds)
+    + node.B_.I_stim_ + node.P_.I_e ) / node.P_.C_m;
 
-  // inline double f_gate(const double x, const double lim, const double tau) {
-  //   return (lim-x)/tau;
-  // }
-  // channel dynamicsf_gate(h,hlim,t_h);...
-  // f[ S::HH_M ] = f_gate(y[ S::HH_M ], mlim, t_m);
-  // f[ S::HH_N ] = f_gate(y[ S::HH_N ], nlim, t_n);
-  // f[ S::HH_P ] = f_gate(y[ S::HH_P ], mlim, t_p);
-  f[ S::HH_H ] = -(y[ S::HH_H ] - hlim)/t_h;
-  f[ S::HH_L ] = -(y[ S::HH_L ] - llim)/t_l;
-  f[ S::HH_Q ] = -(y[ S::HH_Q ] - qlim)/t_q;
-  f[ S::HH_R ] = -(y[ S::HH_R ] - rlim)/t_r;
-  f[ S::HH_S ] = -(y[ S::HH_S ] - slim)/t_s;
+  f[ S::V_D ] = ( -(I_sd+I_ld+I_cah+I_kca)
+     + I_ex + I_in + I_gap ) / node.P_.C_m;
+
+  
+  f[ S::K ] = -(k - klim)/t_k;
+  f[ S::L ] = -(l - llim)/t_l;
+  f[ S::H ] = -(h - hlim)/t_h;
+  f[ S::N ] = -(n - nlim)/t_n;
+  f[ S::Q ] = -(q - qlim)/t_q;
+  f[ S::R ] = -(r - rlim)/t_r;
+  f[ S::S ] = -(s - slim)/t_s;
+
+  f[S::CCA] = -3.0*I_cah - 0.075*cca;
 
   // synapses: alpha functions
   f[ S::DI_EXC ] = -dI_ex / node.P_.tau_synE;
@@ -248,13 +262,6 @@ nest_tc::hh_sdl_alpha_gap_dynamics( double time,
   return GSL_SUCCESS;
 }
 
-// namespace names
-// {
-// const Name l( "l" );
-// const Name q( "q" );
-// const Name r( "r" );
-// const Name s( "s" );
-// }
 
 
 /* ----------------------------------------------------------------
@@ -264,33 +271,36 @@ nest_tc::hh_sdl_alpha_gap_dynamics( double time,
 nest_tc::hh_sdl_alpha_gap::Parameters_::Parameters_()
   : tau_synE( 0.2 ) // ms
   , tau_synI( 2.0 ) // ms
-  , I_e( 0.0 )      // pA
-  // TC
-  , t_ref_( 50. )   // ms
-  , g_Na( 70. )   // nS
-  , g_L( 0.015 )     // nS
-  , C_m( 1. )     // pF
+  , I_e( 0.0 )      // pA 
+  , C_m( 1. )     
+  , t_ref_( 5. )   // ms
+
+  , g_L( 0.015 )   
+  , g_Ld( 0.015 )   
+  , g_Na( 70. )   
+  , g_K(18.)
+  , g_Cal( 1.5)
+  , g_H(1.5)
+  , g_Cah(4.)
+  , g_Kca( 35.)
+  , g_Int( 0.13 )
+  , p_Ds( 0.2 )
+
+  , E_L( -63. )     // mV
+  , E_Ca(120.)
   , E_Na( 55. )    // mV
   , E_K( -75. )    // mV
-  , E_L( -63. )     // mV
-  // TC
-  , g_Kca( 5.)
-  , g_Cal( 1.4)
-  , g_Cah(4.)
-  , g_K(18.)
-  , g_H(1.5)
   , E_H(-43.)
-  , E_Ca(120.)
 {
 }
 
 nest_tc::hh_sdl_alpha_gap::State_::State_( const Parameters_& )
   : r_( 0 )
 {
-  y_[ 0 ] = -69.60401191631222; // p.E_L;
-  //'Inact_n': 0.0005741576228359798, 'Inact_p': 0.00025113182271506364
-  //'Act_h': 0.8684620412943986,
-  for ( size_t i = 1; i < STATE_VEC_SIZE; ++i )
+  y_[ 0 ] = -57.;
+  y_[ 1 ] = -57.;
+  y_[ 2 ] = 5.;
+  for ( size_t i = 3; i < STATE_VEC_SIZE; ++i )
   {
     y_[ i ] = 0;
   }
@@ -380,21 +390,21 @@ void
 nest_tc::hh_sdl_alpha_gap::State_::get( DictionaryDatum& d ) const
 {
   def< double >( d, names::V_m, y_[ V_M ] );
-  // def< double >( d, names::Act_m, y_[ HH_M ] );
-  def< double >( d, names::Act_h, y_[ HH_H ] );
-  // def< double >( d, names::Inact_n, y_[ HH_N ] );
-  // def< double >( d, names::Inact_p, y_[ HH_P ] );
+  // def< double >( d, names::Act_m, y_[ M ] );
+  def< double >( d, names::Act_h, y_[ H ] );
+  // def< double >( d, names::Inact_n, y_[ N ] );
+  // def< double >( d, names::Inact_p, y_[ P ] );
 }
 
 void
 nest_tc::hh_sdl_alpha_gap::State_::set( const DictionaryDatum& d )
 {
   updateValue< double >( d, names::V_m, y_[ V_M ] );
-  // updateValue< double >( d, names::Act_m, y_[ HH_M ] );
-  updateValue< double >( d, names::Act_h, y_[ HH_H ] );
-  // updateValue< double >( d, names::Inact_n, y_[ HH_N ] );
-  // updateValue< double >( d, names::Inact_p, y_[ HH_P ] );
-  // if ( y_[ HH_M ] < 0 || y_[ HH_H ] < 0 || y_[ HH_N ] < 0 || y_[ HH_P ] < 0 )
+  // updateValue< double >( d, names::Act_m, y_[ M ] );
+  updateValue< double >( d, names::Act_h, y_[ H ] );
+  // updateValue< double >( d, names::Inact_n, y_[ N ] );
+  // updateValue< double >( d, names::Inact_p, y_[ P ] );
+  // if ( y_[ M ] < 0 || y_[ H ] < 0 || y_[ N ] < 0 || y_[ P ] < 0 )
   // {
   //   throw BadProperty( "All (in)activation variables must be non-negative." );
   // }
