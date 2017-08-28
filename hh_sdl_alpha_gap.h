@@ -20,11 +20,11 @@
  *
  */
 
-#ifndef hh_sdl_alpha_gap_H
-#define hh_sdl_alpha_gap_H
+#ifndef HH_SDL_ALPHA_GAP_H
+#define HH_SDL_ALPHA_GAP_H
 
 
-#ifdef HAVE_GSL
+// #ifdef HAVE_GSL
 
 // C includes:
 #include <gsl/gsl_errno.h>
@@ -189,6 +189,10 @@ private:
   //! Independent parameters
   struct Parameters_
   {
+    double tau_synE; //!< Synaptic Time Constant Excitatory Synapse in ms
+    double tau_synI; //!< Synaptic Time Constant for Inhibitory Synapse in ms
+    double I_e;      //!< Constant Current in pA
+    
     double t_ref_;   //!< refractory time in ms
     double g_Na;     //!< Sodium Conductance in nS
     double g_L;      //!< Leak Conductance in nS
@@ -196,9 +200,6 @@ private:
     double E_Na;     //!< Sodium Reversal Potential in mV
     double E_K;      //!< Potassium Reversal Potential in mV
     double E_L;      //!< Leak reversal Potential (aka resting potential) in mV
-    double tau_synE; //!< Synaptic Time Constant Excitatory Synapse in ms
-    double tau_synI; //!< Synaptic Time Constant for Inhibitory Synapse in ms
-    double I_e;      //!< Constant Current in pA
     // TC
     double g_Kca;    //!< Potassium Conductance in nS
     double g_Cal;
@@ -234,10 +235,10 @@ public:
     enum StateVecElems
     {
       V_M = 0,
-      HH_M,   // 1
+      // HH_M,   // 1
       HH_H,   // 2
-      HH_N,   // 3
-      HH_P,   // 4
+      // HH_N,   // 3
+      // HH_P,   // 4
       DI_EXC, // 5
       I_EXC,  // 6
       DI_INH, // 7
@@ -462,5 +463,5 @@ hh_sdl_alpha_gap::set_status( const DictionaryDatum& d )
 //   extern const Name r;
 //   extern const Name s;
 // }
-#endif // HAVE_GSL
+// #endif // HAVE_GSL
 #endif // hh_sdl_alpha_gap_H

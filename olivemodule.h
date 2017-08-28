@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef MYMODULE_H
-#define MYMODULE_H
+#ifndef OLIVEMODULE_H
+#define OLIVEMODULE_H
 
 // Includes from sli:
 #include "slifunction.h"
