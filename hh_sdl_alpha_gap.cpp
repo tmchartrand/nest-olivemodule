@@ -141,66 +141,66 @@ nest_tc::hh_sdl_alpha_gap_dynamics( double time,
   const double& g_Kca = node.P_.g_Kca;  
   const double& p_Ds = node.P_.p_Ds;
 
-  // TC
-  //Somatic
+  
+//Somatic
 
-  // Na
-  const double a_m =  0.1*(V+41.)/(1-std::exp(-(V+41.)/10.));
-  const double b_m = 9.0*std::exp(-(V+66.)/20.);
-  const double mlim =  a_m/(a_m+b_m);
-  const double a_h =  5.0*std::exp(-(V+60.)/15.);
-  const double b_h =  (V+50.)/(1-std::exp(-(V+50.)/10.));
-  const double t_h =  170./(a_h + b_h);
-  const double hlim =  a_h/(a_h+b_h);
+//Na
+const double a_m =  0.1*(V+41)/(1-std::exp(-(V+41)/10));
+const double b_m = 9.0*std::exp(-(V+66)/20);
+const double mlim =  a_m/(a_m+b_m);
+const double a_h =  5.0*std::exp(-(V+60)/15);
+const double b_h =  (V+50)/(1-std::exp(-(V+50)/10));
+// b_h =  (V+48)/(1-std::exp(-(V+48)/3)); 2004
+const double t_h =  170.0/(a_h + b_h);
+const double hlim =  a_h/(a_h+b_h);
+const double I_na = g_Na*mlim*mlim*mlim*h*(V-E_Na);
 
-  const double I_na = g_Na*(mlim*mlim*mlim)*h*(V-E_Na);
+//K_dr
+const double a_n = (V+41)/(1-std::exp(-(V+41)/10));
+const double b_n = 12.5*std::exp(-(V+51)/80);
+const double nlim = a_n/(a_n+b_n);
+const double t_n = 5.0/(a_n+b_n);
+const double I_k = g_K*n*n*n*n*(V-E_K);
 
-  //K_dr
-  const double a_n = (V+41.)/(1.-std::exp(-(V+41.)/10.));
-  const double b_n = 12.5*std::exp(-(V+51.)/80.);
-  const double nlim = a_n/(a_n+b_n);
-  const double t_n = 5./(a_n+b_n);
+//Ca_l
+const double klim = 1.0/(1+std::exp(-(V+61)/4.2));
+const double t_k = 5;//1/5 dG? (=0 for manor)
+const double llim = 1.0/(1+std::exp((V+85.5)/8.5));//
+const double t_l = 35 + 20*std::exp((V+160)/30)/(1+std::exp((V+84)/7.3));
+// t_l = 40 + 30*std::exp((V+160)/30)/(1+std::exp((V+84)/8.3));// manor
+const double I_cal = g_Cal*k*k*k*l*(V-E_Ca);
 
-  const double I_k = g_K*(n*n*n*n)*(V-E_K);
+//H
+const double qlim = 1.0/(1+std::exp((V+75)/5.5));
+// qlim = 1.0/(1+std::exp((V+80)/4));//vdg
+const double t_q = 1.0/(std::exp(-0.086*V-14.6) + std::exp(0.07*V-1.87));
+const double I_h = g_H*q*(V - E_H);
 
+//leak, exchange
+const double I_l = g_L*(V-E_L);
+const double I_ds = g_Int/p_Ds*(V-Vd);
 
-  //Ca_l
-  const double klim = 1.0/(1+std::exp(-(V+61.)/4.2));
-  const double t_k = 5.;//1/5 dG? (=0 for manor)
-  const double llim = 1./(1.+std::exp((V+85.5)/8.5));
-  const double t_l = 35. + 20.*std::exp((V+160.)/30.)/(1.+std::exp((V+84.)/7.3));
-  // t_l = 40 + 30*std::exp((V+160)/30)*(1+std::exp((V+84)/8.3));// manor
-  const double I_cal = g_Cal*(klim*klim*klim)*l*(V-E_Ca);
+//Dendritic
 
-  //H - very slow
-  const double qlim = 1./(1.+std::exp((V+75.)/5.5));
-  // qlim = 1*(1+std::exp((V+80)/4));//vdg
-  const double t_q = 1./(std::exp(-0.086*V-14.6) + std::exp(0.07*V-1.87));
-  const double I_h = g_H*q*(V - E_H);
+//leak, exchange
+const double I_sd = g_Int/(1-p_Ds)*(Vd-V);
+const double I_ld = g_Ld*(Vd - E_L);
 
-  //leak
-  const double I_l = g_L*(V-E_L);
-  const double I_ds = g_Int/p_Ds*(V-Vd);
+//Ca_h
+const double a_r = 1.6/(1+std::exp(-(Vd-5)/14));
+// a_r = 1.7/(1+std::exp(-(Vd+5)/13.9));//from deGruijl
+const double b_r = -0.02*(Vd+8.5)/(1-std::exp((Vd+8.5)/5)); //*** must be -
+const double rlim = a_r/(a_r+b_r);
+const double t_r = 1.0/(a_r+b_r);//5/1? (dG)
+const double I_cah = g_Cah*r*r*(Vd-E_Ca);
 
-  //Dendritic
+//K_Ca
+const double a_s = std::min(0.00002*cca,0.01);
+const double b_s = 0.015;
+const double t_s = 1.0/(a_s+b_s);
+const double slim = a_s/(a_s+b_s);
+const double I_kca = g_Kca*s*(Vd-E_K);
 
-  //leak, exchange
-  const double I_ld = g_Ld*(Vd-E_L);
-  const double I_sd = g_Int/(1-p_Ds)*(Vd-V);
-
-  //Ca_h 
-  const double a_r = 1.6/(1+std::exp(-(V-5.)/14.));
-  const double b_r = -0.02*(V+8.5)*(1.-std::exp((V+8.5)/5.)); 
-  const double rlim = a_r/(a_r+b_r);
-  const double t_r = 1./(a_r+b_r);//5/1? (dG)
-  const double I_cah = g_Cah*(r*r)*(V-E_Ca);
-
-  //K_Ca
-  const double a_s = std::min(0.00002*cca,0.01);
-  const double b_s = 0.015;
-  const double t_s = 1./(a_s+b_s);
-  const double slim = a_s/(a_s+b_s);
-  const double I_kca = g_Kca*s*(V-E_K);
 
 
   // set I_gap depending on interpolation order
