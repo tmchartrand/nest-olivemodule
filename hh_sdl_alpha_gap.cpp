@@ -211,18 +211,18 @@ const double I_kca = g_Kca*s*(Vd-E_K);
   switch ( kernel().simulation_manager.get_wfr_interpolation_order() )
   {
   case 0:
-    gap = -node.B_.sumj_g_ij_ * V
+    gap = -node.B_.sumj_g_ij_ * Vd
       + node.B_.interpolation_coefficients[ node.B_.lag_ ];
     break;
 
   case 1:
-    gap = -node.B_.sumj_g_ij_ * V
+    gap = -node.B_.sumj_g_ij_ * Vd
       + node.B_.interpolation_coefficients[ node.B_.lag_ * 2 + 0 ]
       + node.B_.interpolation_coefficients[ node.B_.lag_ * 2 + 1 ] * t;
     break;
 
   case 3:
-    gap = -node.B_.sumj_g_ij_ * V
+    gap = -node.B_.sumj_g_ij_ * Vd
       + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 0 ]
       + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 1 ] * t
       + node.B_.interpolation_coefficients[ node.B_.lag_ * 4 + 2 ] * t * t
@@ -358,8 +358,6 @@ nest_tc::hh_sdl_alpha_gap::Parameters_::set( const DictionaryDatum& d )
   updateValue< double >( d, names::C_m, C_m );
   updateValue< double >( d, names::g_Na, g_Na );
   updateValue< double >( d, names::E_Na, E_Na );
-  // updateValue< double >( d, names::g_Kv1, g_Kv1 );
-  // updateValue< double >( d, names::g_Kv3, g_Kv3 );
   updateValue< double >( d, names::E_K, E_K );
   updateValue< double >( d, names::g_L, g_L );
   updateValue< double >( d, names::E_L, E_L );
@@ -603,17 +601,17 @@ nest_tc::hh_sdl_alpha_gap::update_( Time const& origin,
 
     if ( wfr_update )
     {
-      y_i = S_.y_[ State_::V_M ];
+      y_i = S_.y_[ State_::V_D ];
       if ( interpolation_order == 3 )
       {
         hh_sdl_alpha_gap_dynamics(
           0, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
-        hf_i = B_.step_ * f_temp[ State_::V_M ];
+        hf_i = B_.step_ * f_temp[ State_::V_D ];
       }
     }
 
     double t = 0.0;
-    const double U_old = S_.y_[ State_::V_M ];
+    const double U_old = S_.y_[ State_::V_D ];
 
     // numerical integration with adaptive step size control:
     // ------------------------------------------------------
@@ -681,9 +679,9 @@ nest_tc::hh_sdl_alpha_gap::update_( Time const& origin,
       S_.y_[ State_::DI_INH ] +=
         B_.spike_inh_.get_value_wfr_update( lag ) * V_.PSCurrInit_I_;
       // check deviation from last iteration
-      done = ( fabs( S_.y_[ State_::V_M ] - B_.last_y_values[ lag ] )
+      done = ( fabs( S_.y_[ State_::V_D ] - B_.last_y_values[ lag ] )
                <= wfr_tol ) && done;
-      B_.last_y_values[ lag ] = S_.y_[ State_::V_M ];
+      B_.last_y_values[ lag ] = S_.y_[ State_::V_D ];
 
       // update different interpolations
 
@@ -696,16 +694,16 @@ nest_tc::hh_sdl_alpha_gap::update_( Time const& origin,
         break;
 
       case 1:
-        y_ip1 = S_.y_[ State_::V_M ];
+        y_ip1 = S_.y_[ State_::V_D ];
 
         new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = y_ip1 - y_i;
         break;
 
       case 3:
-        y_ip1 = S_.y_[ State_::V_M ];
+        y_ip1 = S_.y_[ State_::V_D ];
         hh_sdl_alpha_gap_dynamics(
           B_.step_, S_.y_, f_temp, reinterpret_cast< void* >( this ) );
-        hf_ip1 = B_.step_ * f_temp[ State_::V_M ];
+        hf_ip1 = B_.step_ * f_temp[ State_::V_D ];
 
         new_coefficients[ lag * ( interpolation_order + 1 ) + 1 ] = hf_i;
         new_coefficients[ lag * ( interpolation_order + 1 ) + 2 ] =
@@ -728,7 +726,7 @@ nest_tc::hh_sdl_alpha_gap::update_( Time const& origin,
     for ( long temp = from; temp < to; ++temp )
     {
       new_coefficients[ temp * ( interpolation_order + 1 ) + 0 ] =
-        S_.y_[ State_::V_M ];
+        S_.y_[ State_::V_D ];
     }
 
     B_.last_y_values.clear();
