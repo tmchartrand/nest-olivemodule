@@ -349,6 +349,7 @@ nest_tc::hh_sdl_alpha_gap::Parameters_::get( DictionaryDatum& d ) const
   def< double >( d, names::tau_syn_ex, tau_synE );
   def< double >( d, names::tau_syn_in, tau_synI );
   def< double >( d, names::I_e, I_e );
+  def< double >( d, "g_Cal", g_Cal );
 }
 
 void
@@ -366,6 +367,9 @@ nest_tc::hh_sdl_alpha_gap::Parameters_::set( const DictionaryDatum& d )
   updateValue< double >( d, names::tau_syn_in, tau_synI );
 
   updateValue< double >( d, names::I_e, I_e );
+
+  updateValue< double >( d, "g_Cal", g_Cal );
+  
   if ( C_m <= 0 )
   {
     throw BadProperty( "Capacitance must be strictly positive." );
